@@ -1,43 +1,35 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import { Card } from '$lib/components/ui/card';
-	import StatusBadge from '$lib/components/metrics/StatusBadge.svelte';
 	import { getFosStatus, getPofStatus, getRuStatus, getCohesionStatus, calculateOverallStatus } from '$lib/components/metrics';
 
-	// Mock data - will be replaced with real calculations
-	let fos = $state(1.468);
-	let pof = $state(1.68);
-	let ru = $state(0.316);
-	let cohesion = $state(14.7);
-	let displacedParticles = $state(0);
+	interface Props {
+		fos?: number;
+		pof?: number;
+		ru?: number;
+		cohesion?: number;
+		displacedParticles?: number;
+	}
+
+	let {
+		fos = 1.468,
+		pof = 1.68,
+		ru = 0.316,
+		cohesion = 14.7,
+		displacedParticles = 0
+	}: Props = $props();
 
 	let overallStatus = $derived(calculateOverallStatus(fos, pof));
 
-	const statusLabels = {
-		safe: 'Stable',
-		marginal: 'Caution',
-		critical: 'Unstable',
-		failure: 'Failing'
-	};
-
-	const statusDescriptions = {
-		safe: 'Slope is stable.',
-		marginal: 'Monitor closely.',
-		critical: 'Action needed.',
-		failure: 'Emergency!'
+	const statusConfig = {
+		safe: { label: 'Stable', color: 'bg-green-500' },
+		marginal: { label: 'Caution', color: 'bg-yellow-500' },
+		critical: { label: 'Unstable', color: 'bg-orange-500' },
+		failure: { label: 'Failing', color: 'bg-red-500' }
 	};
 
 	const fosStatus = $derived(getFosStatus(fos));
 	const pofStatus = $derived(getPofStatus(pof));
 	const ruStatus = $derived(getRuStatus(ru));
 	const cohesionStatus = $derived(getCohesionStatus(cohesion));
-
-	const statusColors = {
-		safe: 'border-l-green-500 bg-green-50/50',
-		marginal: 'border-l-yellow-500 bg-yellow-50/50',
-		critical: 'border-l-orange-500 bg-orange-50/50',
-		failure: 'border-l-red-500 bg-red-50/50'
-	};
 
 	interface Metric {
 		label: string;
@@ -55,28 +47,30 @@
 	]);
 </script>
 
-<aside class="w-64 bg-neutral-50 border-l border-neutral-200 flex flex-col overflow-y-auto">
+<aside class="w-56 bg-white border-l border-neutral-200 flex flex-col overflow-y-auto">
 	<!-- Header -->
-	<div class="p-4 border-b border-neutral-200 bg-white">
-		<div class="flex items-center justify-between mb-2">
-			<h2 class="text-sm font-semibold text-neutral-700">System Status</h2>
-			<StatusBadge status={overallStatus} label={statusLabels[overallStatus]} />
+	<div class="px-3 py-2.5 border-b border-neutral-100">
+		<div class="flex items-center justify-between">
+			<span class="text-xs font-medium text-neutral-500">Status</span>
+			<div class="flex items-center gap-1.5">
+				<span class="w-1.5 h-1.5 {statusConfig[overallStatus].color}"></span>
+				<span class="text-xs font-medium text-neutral-900">{statusConfig[overallStatus].label}</span>
+			</div>
 		</div>
-		<p class="text-xs text-neutral-500">{statusDescriptions[overallStatus]}</p>
 	</div>
 
 	<!-- Metrics -->
-	<div class="flex-1 p-3 space-y-2">
-		{#each metrics as metric (metric.abbrev)}
-			<div class="bg-white rounded-md border border-l-4 {statusColors[metric.status]} p-2.5 shadow-sm">
-				<div class="flex items-center justify-between mb-1">
-					<span class="text-xs text-neutral-500">{metric.label}</span>
-					<span class="text-xs font-medium text-neutral-400">({metric.abbrev})</span>
+	<div class="flex-1">
+		{#each metrics as metric, i (metric.abbrev)}
+			<div class="px-3 py-2.5 flex items-center justify-between {i < metrics.length - 1 ? 'border-b border-neutral-100' : ''}">
+				<div class="flex flex-col">
+					<span class="text-xs text-neutral-400">{metric.label}</span>
+					<span class="text-[10px] font-mono text-neutral-300">({metric.abbrev})</span>
 				</div>
-				<div class="flex items-baseline gap-1">
-					<span class="text-lg font-bold font-mono text-neutral-900">{metric.value}</span>
+				<div class="flex items-baseline gap-0.5">
+					<span class="text-sm font-semibold font-mono text-neutral-900">{metric.value}</span>
 					{#if metric.unit}
-						<span class="text-xs text-neutral-500">{metric.unit}</span>
+						<span class="text-[10px] text-neutral-400">{metric.unit}</span>
 					{/if}
 				</div>
 			</div>
@@ -84,10 +78,10 @@
 	</div>
 
 	<!-- Footer Stats -->
-	<div class="p-3 border-t border-neutral-200 bg-white">
-		<div class="flex items-center justify-between text-xs">
-			<span class="text-neutral-500">Displaced</span>
-			<span class="font-mono font-medium text-neutral-700">{displacedParticles} particles</span>
+	<div class="px-3 py-2.5 border-t border-neutral-100">
+		<div class="flex items-center justify-between">
+			<span class="text-xs text-neutral-400">Displaced</span>
+			<span class="text-xs font-mono font-medium text-neutral-700">{displacedParticles}</span>
 		</div>
 	</div>
 </aside>

@@ -5,21 +5,24 @@
 	let {
 		ref = $bindable(null),
 		value = $bindable(),
+		onValueChange,
 		type = "single",
 		orientation = "horizontal",
 		class: className,
 		...restProps
 	}: any = $props();
+
+	// Proxy the change event to keep "value" in sync and forward to parent.
+	function handleValueChange(newValue: number | number[]) {
+		value = newValue as any;
+		onValueChange?.(newValue as any);
+	}
 </script>
 
-<!--
-Discriminated Unions + Destructing (required for bindable) do not
-get along, so we shut typescript up by using `any` for props type
-and casting `value` to `never`.
--->
 <SliderPrimitive.Root
 	bind:ref
-	bind:value={value as never}
+	{value}
+	onValueChange={handleValueChange}
 	{type}
 	data-slot="slider"
 	{orientation}
@@ -29,7 +32,7 @@ and casting `value` to `never`.
 	)}
 	{...restProps}
 >
-	{#snippet children({ thumbs })}
+	{#snippet children({ thumbItems })}
 		<span
 			data-orientation={orientation}
 			data-slot="slider-track"
@@ -44,10 +47,10 @@ and casting `value` to `never`.
 				)}
 			/>
 		</span>
-		{#each thumbs as thumb (thumb)}
+		{#each thumbItems as { index } (index)}
 			<SliderPrimitive.Thumb
 				data-slot="slider-thumb"
-				index={thumb}
+				{index}
 				class="border-primary bg-background ring-ring/50 focus-visible:outline-hidden block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50"
 			/>
 		{/each}

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import ParameterCard from '$lib/components/controls/ParameterCard.svelte';
 	import ParameterSlider from '$lib/components/controls/ParameterSlider.svelte';
-	import ActionButtons from '$lib/components/controls/ActionButtons.svelte';
 	import TimeDisplay from '$lib/components/controls/TimeDisplay.svelte';
 
 	// Environmental Factors
@@ -22,20 +21,19 @@
 	let coefficientOfVariation = $state(0.15);
 
 	// Simulation state
-	let isRaining = $state(false);
 	let elapsedTime = $state(0);
 	let rainfallAmount = $state(0);
 </script>
 
 <aside class="w-80 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col">
 	<!-- Sidebar Header -->
-	<div class="p-6 border-b border-neutral-200">
-		<h1 class="text-2xl font-bold text-neutral-900">Landslide Simulator</h1>
-		<p class="text-sm text-neutral-600 mt-1">Physics-based simulation engine</p>
+	<div class="p-4 border-b border-neutral-200">
+		<h1 class="text-lg font-semibold text-neutral-900">Landslide Simulator</h1>
+		<p class="text-xs text-neutral-500 mt-0.5">Physics-based simulation engine</p>
 	</div>
 
 	<!-- Sidebar Content -->
-	<div class="flex-1 p-6 space-y-4">
+	<div class="flex-1 p-4 space-y-3 pb-20">
 		<!-- Environmental Factors -->
 		<ParameterCard title="Environmental Factors" icon="fluent:plant-grass-20-regular">
 			{#snippet children()}
@@ -144,9 +142,6 @@
 
 		<!-- Time Display -->
 		<TimeDisplay {elapsedTime} {rainfallAmount} />
-
-		<!-- Action Buttons -->
-		<ActionButtons bind:isRaining />
 	</div>
 </aside>
 

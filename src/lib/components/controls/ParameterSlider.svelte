@@ -18,11 +18,10 @@
 		unit?: string;
 	} = $props();
 
-	let sliderValue = $state([value]);
-
-	$effect(() => {
-		value = sliderValue[0];
-	});
+	// Handle slider value change via callback (single value)
+	function onValueChange(newValue: number) {
+		value = newValue;
+	}
 </script>
 
 <div class="space-y-2">
@@ -33,5 +32,5 @@
 		</span>
 	</div>
 
-	<Slider bind:value={sliderValue} type="single" {min} {max} {step} class="w-full" />
+	<Slider value={value} {onValueChange} type="single" {min} {max} {step} class="w-full" />
 </div>

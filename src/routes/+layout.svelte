@@ -6,6 +6,7 @@
 </script>
 
 <svelte:head>
+	<title>Dynamic Landslide Simulator</title>
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
