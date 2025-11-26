@@ -1,44 +1,56 @@
 <script lang="ts">
 	import { Canvas } from '@threlte/core';
-	import { TerrainGenerator } from '$lib/simulation/terrain';
 	import Terrain from '$lib/components/viewport/Terrain.svelte';
+	import Trees from '$lib/components/viewport/Trees.svelte';
+	import Rain from '$lib/components/viewport/Rain.svelte';
+	import Debris from '$lib/components/viewport/Debris.svelte';
 	import CameraController from '$lib/components/viewport/CameraController.svelte';
 	import Lighting from '$lib/components/viewport/Lighting.svelte';
 	import Sky from '$lib/components/viewport/Sky.svelte';
+	import type { FailureZone } from '$lib/simulation/physics';
 
 	interface Props {
 		isRaining?: boolean;
-		slopeAngle?: number;
+		rainfallIntensity?: number;
 		maxElevation?: number;
+		vegetationCover?: number;
+		soilDepth?: number;
+		saturation?: number;
+		porePressureRatio?: number;
+		// Heightmap from page (single source of truth)
+		heightmap: Float32Array;
+		// Landslide deformation (terrain-based, no particles)
+		isLandslideActive?: boolean;
+		scarpDepth?: Float32Array | null;
+		depositionDepth?: Float32Array | null;
+		// Version counter to force terrain updates when arrays change in-place
+		deformationVersion?: number;
+		// Landslide progress and failure zone for debris particles
+		landslideProgress?: number;
+		failureZone?: FailureZone | null;
 	}
 
-	let { isRaining = false, slopeAngle = 30, maxElevation = 50 }: Props = $props();
+	let {
+		isRaining = false,
+		rainfallIntensity = 25,
+		maxElevation = 50,
+		vegetationCover = 70,
+		soilDepth = 3.0,
+		saturation = 0,
+		porePressureRatio = 0,
+		heightmap,
+		isLandslideActive = false,
+		scarpDepth = null,
+		depositionDepth = null,
+		deformationVersion = 0,
+		landslideProgress = 0,
+		failureZone = null
+	}: Props = $props();
 
-	// Terrain configuration
+	// Terrain configuration (shared constants)
 	const width = 128;
 	const height = 128;
 	const worldScale = 100;
-
-	// Generate terrain heightmap
-	const generator = new TerrainGenerator({
-		width,
-		height,
-		worldScale,
-		maxElevation,
-		slopeAngle,
-		noiseOctaves: 5,
-		noisePersistence: 0.5,
-		noiseScale: 0.025,
-		ridgeSharpness: 0.45
-	});
-
-	let heightmap = $state<Float32Array>(generator.generateHeightmap());
-
-	// Regenerate terrain when parameters change
-	$effect(() => {
-		generator.setConfig({ slopeAngle, maxElevation });
-		heightmap = generator.generateHeightmap();
-	});
 </script>
 
 <main class="flex-1 bg-neutral-900 relative overflow-hidden">
@@ -54,6 +66,43 @@
 				{height}
 				{worldScale}
 				{maxElevation}
+				{vegetationCover}
+				{soilDepth}
+				{saturation}
+				{porePressureRatio}
+				{scarpDepth}
+				{depositionDepth}
+				{deformationVersion}
+			/>
+			<Trees
+				{heightmap}
+				{width}
+				{height}
+				{worldScale}
+				{maxElevation}
+				maxTreeCount={150}
+				maxSlope={25}
+				{vegetationCover}
+			/>
+		{/if}
+
+		<Rain
+			{isRaining}
+			intensity={rainfallIntensity}
+			{worldScale}
+			{maxElevation}
+		/>
+
+		{#if heightmap && heightmap.length > 0}
+			<Debris
+				isActive={isLandslideActive}
+				{failureZone}
+				{heightmap}
+				{width}
+				{height}
+				{worldScale}
+				{maxElevation}
+				progress={landslideProgress}
 			/>
 		{/if}
 	</Canvas>

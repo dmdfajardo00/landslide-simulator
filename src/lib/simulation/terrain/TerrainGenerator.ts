@@ -108,13 +108,17 @@ export class TerrainGenerator {
 				const ridgeNoise = (1 - Math.abs(noiseValue)) * ridgeSharpness + noiseValue * (1 - ridgeSharpness);
 
 				// Combine all contributions
-				const terrainNoise = ridgeNoise * 0.35; // Noise adds ±35% variation
+				// Scale noise down on steeper slopes for cleaner appearance
+				const slopeInfluence = Math.min(1, slopeAngle / 45);
+				const noiseMultiplier = 0.35 * (1 - slopeInfluence * 0.3); // Reduce noise by up to 30% on steep slopes
+				const terrainNoise = ridgeNoise * noiseMultiplier;
 
 				// Edge falloff to create natural boundaries
 				const edgeFalloff = this.calculateEdgeFalloff(normX, normZ);
 
 				// Final height combining slope, peak, and noise
-				const rawHeight = (baseSlope * 0.5 + peakContribution + terrainNoise * 0.5) * edgeFalloff;
+				// Increased baseSlope multiplier from 0.5 to 0.7 for more dramatic slope effect
+				const rawHeight = (baseSlope * 0.7 + peakContribution + terrainNoise * 0.5) * edgeFalloff;
 				rawHeights[index] = rawHeight;
 
 				minHeight = Math.min(minHeight, rawHeight);
