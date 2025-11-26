@@ -3,6 +3,20 @@
 	import ViewportPlaceholder from '$lib/components/layout/ViewportPlaceholder.svelte';
 	import MetricsPanel from '$lib/components/layout/MetricsPanel.svelte';
 	import ActionButtons from '$lib/components/controls/ActionButtons.svelte';
+	import {
+		calculateFoS,
+		calculatePoF,
+		calculatePorePressure,
+		updateInfiltration,
+		createLandslideState,
+		calculateFailureZone,
+		updateLandslideState,
+		calculateTerrainDeformation,
+		calculateDisplacedVolume,
+		type FailureZone
+	} from '$lib/simulation/physics';
+	import { TerrainGenerator } from '$lib/simulation/terrain';
+	import type { HydrologicalState, LandslideState } from '$lib/simulation/physics';
 
 	// Simulation state
 	let isRaining = $state(false);
@@ -13,37 +27,139 @@
 	// Terrain parameters (bound from Sidebar)
 	let slopeAngle = $state(30);
 	let maxElevation = $state(50);
+	let rainfallIntensity = $state(25);
+	let vegetationCover = $state(70);
+	let soilDepth = $state(3.0);
 
-	// Metrics state (will be calculated based on simulation)
-	let fos = $state(1.468);
-	let pof = $state(1.68);
-	let ru = $state(0.316);
-	let cohesion = $state(14.7);
+	// Environmental parameters
+	let erosion = $state(20);
+	let soilMoisture = $state(30);
+
+	// Geotechnical parameters
+	let unitWeight = $state(19.0);
+	let cohesionInput = $state(15);
+	let frictionAngle = $state(32);
+	let hydraulicConductivity = $state(5.0);
+
+	// Reliability parameter
+	let coefficientOfVariation = $state(0.15);
+
+	// Hydrological state for physics calculations
+	let hydrologicalState = $state<HydrologicalState>({
+		saturationDepth: 0,
+		porePressure: 0,
+		porePressureRatio: 0,
+		infiltrationRate: 0
+	});
+
+	// Metrics state (calculated from physics)
+	let fos = $state(1.5);
+	let pof = $state(1.0);
+	let ru = $state(0.0);
+	let cohesion = $state(15);
 	let displacedParticles = $state(0);
+
+	// Derived saturation for terrain visualization (0-1)
+	let saturation = $derived(soilDepth > 0 ? hydrologicalState.saturationDepth / soilDepth : 0);
+
+	// Landslide state
+	let landslideState = $state<LandslideState>(createLandslideState());
+
+	// Terrain constants for landslide calculations
+	const TERRAIN_WIDTH = 128;
+	const TERRAIN_HEIGHT = 128;
+	const WORLD_SCALE = 100;
+
+	// Pre-allocated deformation arrays (reused every tick to avoid GC)
+	const deformationScarp = new Float32Array(TERRAIN_WIDTH * TERRAIN_HEIGHT);
+	const deformationDeposition = new Float32Array(TERRAIN_WIDTH * TERRAIN_HEIGHT);
+	let scarpDepth = $state<Float32Array | null>(null);
+	let depositionDepth = $state<Float32Array | null>(null);
+	// Version counter to force Svelte reactivity when arrays update in-place
+	let deformationVersion = $state(0);
+
+	// Generate heightmap for landslide calculations (synchronized with viewport)
+	const terrainGenerator = new TerrainGenerator({
+		width: TERRAIN_WIDTH,
+		height: TERRAIN_HEIGHT,
+		worldScale: WORLD_SCALE,
+		maxElevation,
+		slopeAngle,
+		noiseOctaves: 5,
+		noisePersistence: 0.5,
+		noiseScale: 0.025,
+		ridgeSharpness: 0.45
+	});
+
+	let currentHeightmap = $state<Float32Array>(terrainGenerator.generateHeightmap());
+
+	// Regenerate heightmap when terrain parameters change
+	$effect(() => {
+		terrainGenerator.setConfig({ slopeAngle, maxElevation });
+		currentHeightmap = terrainGenerator.generateHeightmap();
+	});
 
 	// Simulation interval
 	let simulationInterval: ReturnType<typeof setInterval> | null = null;
+	const DELTA_TIME = 0.1; // 100ms in seconds
+
+	function updatePhysics() {
+		// Update infiltration if raining
+		if (isRaining) {
+			hydrologicalState = updateInfiltration(
+				hydrologicalState,
+				{
+					rainfallIntensity,
+					hydraulicConductivity,
+					vegetation: vegetationCover / 100,
+					soilDepth,
+					porosity: 0.35
+				},
+				DELTA_TIME
+			);
+			rainfallAccumulated += (rainfallIntensity * DELTA_TIME) / 3600; // Convert mm/hr to mm per tick
+		}
+
+		// Calculate pore pressure from saturation
+		const poreResult = calculatePorePressure(
+			hydrologicalState.saturationDepth,
+			soilDepth,
+			unitWeight
+		);
+		hydrologicalState.porePressure = poreResult.Pw;
+		hydrologicalState.porePressureRatio = poreResult.ru;
+		ru = poreResult.ru;
+
+		// Calculate effective cohesion (reduced by saturation)
+		cohesion = cohesionInput * (1 - ru * 0.5);
+
+		// Calculate Factor of Safety
+		fos = calculateFoS(
+			{
+				slopeAngle,
+				soilDepth,
+				unitWeight,
+				cohesion,
+				frictionAngle,
+				hydraulicConductivity
+			},
+			hydrologicalState.porePressure
+		);
+
+		// Calculate Probability of Failure
+		pof = calculatePoF(fos, coefficientOfVariation);
+	}
 
 	function startSimulation() {
 		if (simulationInterval) return;
 
 		simulationInterval = setInterval(() => {
 			elapsedTime += 1;
-
-			if (isRaining) {
-				rainfallAccumulated += 0.5;
-				// Gradually increase pore pressure and decrease FoS when raining
-				ru = Math.min(0.8, ru + 0.002);
-				fos = Math.max(0.8, fos - 0.003);
-				pof = Math.min(95, pof + 0.05);
-				cohesion = Math.max(5, cohesion - 0.02);
-			}
+			updatePhysics();
 
 			if (isTriggered) {
-				// Rapid changes when landslide is triggered
-				displacedParticles += Math.floor(Math.random() * 50) + 10;
-				fos = Math.max(0.5, fos - 0.01);
-				pof = Math.min(99, pof + 0.2);
+				// Update landslide physics
+				updateLandslidePhysics();
 			}
 		}, 100);
 	}
@@ -57,14 +173,93 @@
 
 	function handleToggleRain() {
 		if (isRaining && !isTriggered) {
-			// Only start simulation when rain starts
 			startSimulation();
 		}
 	}
 
 	function handleTrigger() {
 		isTriggered = true;
+
+		// Initialize landslide if we have heightmap
+		if (currentHeightmap && landslideState.phase === 'dormant') {
+			// Calculate failure zone (spans horizontally across slope)
+			// Uses current saturation, but also considers base instability from slope/soil
+			const effectiveSaturation = Math.max(saturation, 0.3); // Minimum 30% for visible effect
+			const failureZone = calculateFailureZone(
+				currentHeightmap,
+				TERRAIN_WIDTH,
+				TERRAIN_HEIGHT,
+				WORLD_SCALE,
+				maxElevation,
+				slopeAngle,
+				soilDepth,
+				effectiveSaturation
+			);
+
+			// Calculate initial terrain deformation (progress starts at 0)
+			calculateTerrainDeformation(
+				failureZone,
+				0.05, // Initial progress to show initiation
+				TERRAIN_WIDTH,
+				TERRAIN_HEIGHT,
+				WORLD_SCALE,
+				deformationScarp,
+				deformationDeposition
+			);
+
+			// Update state - no particles, just terrain deformation
+			landslideState = {
+				...landslideState,
+				phase: 'initiating',
+				progress: 0.05,
+				failureZone,
+				totalVolume: calculateDisplacedVolume(failureZone, 0.05),
+				runoutDistance: failureZone.toeZ - failureZone.headZ,
+				elapsedTime: 0
+			};
+
+			// Point state to pre-allocated arrays and increment version to trigger reactivity
+			scarpDepth = deformationScarp;
+			depositionDepth = deformationDeposition;
+			deformationVersion++;
+		}
+
 		startSimulation();
+	}
+
+	function updateLandslidePhysics() {
+		if (landslideState.phase === 'dormant' || landslideState.phase === 'complete') {
+			return;
+		}
+
+		if (!currentHeightmap) return;
+
+		// Update landslide state (advances progress over time)
+		landslideState = updateLandslideState(landslideState, DELTA_TIME);
+
+		// Update terrain deformation based on current progress (reusing pre-allocated arrays)
+		if (landslideState.failureZone) {
+			calculateTerrainDeformation(
+				landslideState.failureZone,
+				landslideState.progress,
+				TERRAIN_WIDTH,
+				TERRAIN_HEIGHT,
+				WORLD_SCALE,
+				deformationScarp,
+				deformationDeposition
+			);
+			// Increment version to trigger Svelte reactivity (arrays updated in-place)
+			deformationVersion++;
+
+			// Update total displaced volume
+			landslideState.totalVolume = calculateDisplacedVolume(
+				landslideState.failureZone,
+				landslideState.progress
+			);
+		}
+
+		// Update displaced volume as integer for display (m³)
+		displacedParticles = Math.round(landslideState.totalVolume);
 	}
 
 	function handleReset() {
@@ -73,12 +268,37 @@
 		isTriggered = false;
 		elapsedTime = 0;
 		rainfallAccumulated = 0;
-		fos = 1.468;
-		pof = 1.68;
-		ru = 0.316;
-		cohesion = 14.7;
+		hydrologicalState = {
+			saturationDepth: 0,
+			porePressure: 0,
+			porePressureRatio: 0,
+			infiltrationRate: 0
+		};
+
+		// Reset landslide state
+		landslideState = createLandslideState();
+		scarpDepth = null;
+		depositionDepth = null;
+
+		// Recalculate initial state
+		ru = 0;
+		cohesion = cohesionInput;
+		fos = calculateFoS(
+			{ slopeAngle, soilDepth, unitWeight, cohesion: cohesionInput, frictionAngle, hydraulicConductivity },
+			0
+		);
+		pof = calculatePoF(fos, coefficientOfVariation);
 		displacedParticles = 0;
 	}
+
+	// Initialize physics on mount and when parameters change
+	$effect(() => {
+		// Recalculate when any geotechnical parameter changes
+		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation];
+		if (!isRaining && !isTriggered) {
+			updatePhysics();
+		}
+	});
 
 	// Start/stop simulation based on rain state
 	$effect(() => {
@@ -97,12 +317,37 @@
 		bind:maxElevation
 		bind:elapsedTime
 		bind:rainfallAmount={rainfallAccumulated}
+		bind:rainfallIntensity
+		bind:vegetationCover
+		bind:soilDepth
+		bind:erosion
+		bind:soilMoisture
+		bind:unitWeight
+		bind:cohesion={cohesionInput}
+		bind:frictionAngle
+		bind:hydraulicConductivity
+		bind:coefficientOfVariation
 	/>
 
 	<!-- Main Content Area -->
 	<div class="flex flex-1 overflow-hidden">
 		<!-- Center Viewport -->
-		<ViewportPlaceholder {isRaining} {slopeAngle} {maxElevation} />
+		<ViewportPlaceholder
+			{isRaining}
+			{rainfallIntensity}
+			{maxElevation}
+			{vegetationCover}
+			{soilDepth}
+			{saturation}
+			porePressureRatio={ru}
+			heightmap={currentHeightmap}
+			isLandslideActive={isTriggered && landslideState.phase !== 'dormant'}
+			{scarpDepth}
+			{depositionDepth}
+			{deformationVersion}
+			failureZone={landslideState.failureZone}
+			landslideProgress={landslideState.progress}
+		/>
 
 		<!-- Right Metrics Panel -->
 		<MetricsPanel {fos} {pof} {ru} {cohesion} {displacedParticles} />
