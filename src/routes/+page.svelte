@@ -10,6 +10,10 @@
 	let elapsedTime = $state(0);
 	let rainfallAccumulated = $state(0);
 
+	// Terrain parameters (bound from Sidebar)
+	let slopeAngle = $state(30);
+	let maxElevation = $state(50);
+
 	// Metrics state (will be calculated based on simulation)
 	let fos = $state(1.468);
 	let pof = $state(1.68);
@@ -88,12 +92,17 @@
 
 <div class="flex h-screen bg-white relative">
 	<!-- Left Sidebar - Full Height -->
-	<Sidebar />
+	<Sidebar
+		bind:slopeAngle
+		bind:maxElevation
+		bind:elapsedTime
+		bind:rainfallAmount={rainfallAccumulated}
+	/>
 
 	<!-- Main Content Area -->
 	<div class="flex flex-1 overflow-hidden">
 		<!-- Center Viewport -->
-		<ViewportPlaceholder {isRaining} />
+		<ViewportPlaceholder {isRaining} {slopeAngle} {maxElevation} />
 
 		<!-- Right Metrics Panel -->
 		<MetricsPanel {fos} {pof} {ru} {cohesion} {displacedParticles} />

@@ -3,6 +3,20 @@
 	import ParameterSlider from '$lib/components/controls/ParameterSlider.svelte';
 	import TimeDisplay from '$lib/components/controls/TimeDisplay.svelte';
 
+	interface Props {
+		slopeAngle?: number;
+		maxElevation?: number;
+		elapsedTime?: number;
+		rainfallAmount?: number;
+	}
+
+	let {
+		slopeAngle = $bindable(30),
+		maxElevation = $bindable(50),
+		elapsedTime = $bindable(0),
+		rainfallAmount = $bindable(0)
+	}: Props = $props();
+
 	// Environmental Factors
 	let vegetation = $state(50);
 	let erosion = $state(20);
@@ -14,15 +28,10 @@
 	let unitWeight = $state(19.0);
 	let cohesion = $state(15);
 	let frictionAngle = $state(32);
-	let slopeAngle = $state(30);
 	let hydraulicConductivity = $state(5.0);
 
 	// Reliability Analysis
 	let coefficientOfVariation = $state(0.15);
-
-	// Simulation state
-	let elapsedTime = $state(0);
-	let rainfallAmount = $state(0);
 </script>
 
 <aside class="w-80 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col">
