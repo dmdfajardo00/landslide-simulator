@@ -8,30 +8,40 @@
 		maxElevation?: number;
 		elapsedTime?: number;
 		rainfallAmount?: number;
+		rainfallIntensity?: number;
+		vegetationCover?: number;
+		soilDepth?: number;
+		// Environmental
+		erosion?: number;
+		soilMoisture?: number;
+		// Geotechnical
+		unitWeight?: number;
+		cohesion?: number;
+		frictionAngle?: number;
+		hydraulicConductivity?: number;
+		// Reliability
+		coefficientOfVariation?: number;
 	}
 
 	let {
 		slopeAngle = $bindable(30),
 		maxElevation = $bindable(50),
 		elapsedTime = $bindable(0),
-		rainfallAmount = $bindable(0)
+		rainfallAmount = $bindable(0),
+		rainfallIntensity = $bindable(25),
+		vegetationCover = $bindable(70),
+		soilDepth = $bindable(3.0),
+		// Environmental
+		erosion = $bindable(20),
+		soilMoisture = $bindable(30),
+		// Geotechnical
+		unitWeight = $bindable(19.0),
+		cohesion = $bindable(15),
+		frictionAngle = $bindable(32),
+		hydraulicConductivity = $bindable(5.0),
+		// Reliability
+		coefficientOfVariation = $bindable(0.15)
 	}: Props = $props();
-
-	// Environmental Factors
-	let vegetation = $state(50);
-	let erosion = $state(20);
-	let soilMoisture = $state(30);
-	let rainfall = $state(10);
-
-	// Geotechnical Parameters
-	let soilDepth = $state(3.0);
-	let unitWeight = $state(19.0);
-	let cohesion = $state(15);
-	let frictionAngle = $state(32);
-	let hydraulicConductivity = $state(5.0);
-
-	// Reliability Analysis
-	let coefficientOfVariation = $state(0.15);
 </script>
 
 <aside class="w-80 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col">
@@ -48,7 +58,7 @@
 			{#snippet children()}
 				<ParameterSlider
 					label="Vegetation Cover"
-					bind:value={vegetation}
+					bind:value={vegetationCover}
 					min={0}
 					max={100}
 					step={1}
@@ -72,7 +82,7 @@
 				/>
 				<ParameterSlider
 					label="Rainfall Intensity"
-					bind:value={rainfall}
+					bind:value={rainfallIntensity}
 					min={0}
 					max={100}
 					step={1}
