@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Icon } from '@iconify/svelte';
+	import Icon from '@iconify/svelte';
 </script>
 
 <main class="flex-1 bg-gradient-to-br from-neutral-100 to-neutral-200 relative flex items-center justify-center overflow-hidden">

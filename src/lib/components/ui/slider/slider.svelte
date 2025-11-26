@@ -1,23 +1,26 @@
 <script lang="ts">
 	import { Slider as SliderPrimitive } from "bits-ui";
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
+	import { cn } from "$lib/utils";
 
 	let {
 		ref = $bindable(null),
 		value = $bindable(),
+		type = "single",
 		orientation = "horizontal",
 		class: className,
 		...restProps
-	}: WithoutChildrenOrChild<SliderPrimitive.RootProps> = $props();
+	}: any = $props();
 </script>
 
 <!--
 Discriminated Unions + Destructing (required for bindable) do not
-get along, so we shut typescript up by casting `value` to `never`.
+get along, so we shut typescript up by using `any` for props type
+and casting `value` to `never`.
 -->
 <SliderPrimitive.Root
 	bind:ref
 	bind:value={value as never}
+	{type}
 	data-slot="slider"
 	{orientation}
 	class={cn(

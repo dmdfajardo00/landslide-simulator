@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Icon } from '@iconify/svelte';
+	import Icon from '@iconify/svelte';
 	import { Button } from '$lib/components/ui/button';
 
 	let { isRaining = $bindable(false) }: { isRaining?: boolean } = $props();

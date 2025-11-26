@@ -33,5 +33,5 @@
 		</span>
 	</div>
 
-	<Slider bind:value={sliderValue} {min} {max} {step} class="w-full" />
+	<Slider bind:value={sliderValue} type="single" {min} {max} {step} class="w-full" />
 </div>

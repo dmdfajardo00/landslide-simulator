@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Icon } from '@iconify/svelte';
+	import Icon from '@iconify/svelte';
 	import { Card } from '$lib/components/ui/card';
 
 	let { title, icon, children }: { title: string; icon: string; children?: any } = $props();
