@@ -38,8 +38,8 @@ export function updateInfiltration(
 	// 1 m/s = 3,600,000 mm/hr
 	const k_mmhr = hydraulicConductivity * 3600;
 
-	// Calculate current saturation ratio
-	const saturationRatio = state.saturationDepth / soilDepth;
+	// Calculate current saturation ratio (guard against division by zero)
+	const saturationRatio = soilDepth > 0 ? state.saturationDepth / soilDepth : 1;
 
 	// Vegetation enhancement factor (increases infiltration capacity)
 	// α represents root system effects on soil structure
@@ -57,7 +57,8 @@ export function updateInfiltration(
 
 	// Calculate change in saturation depth
 	// Accounts for porosity (only pore space can be filled)
-	const deltaSaturation = (infiltrationRate_ms * deltaTime) / porosity;
+	// Guard against division by zero if porosity is 0
+	const deltaSaturation = porosity > 0 ? (infiltrationRate_ms * deltaTime) / porosity : 0;
 
 	// Update saturation depth
 	let newSaturationDepth = state.saturationDepth + deltaSaturation;
@@ -95,12 +96,16 @@ export function calculateEvapotranspiration(
 	potentialET: number = 4.0 // mm/day reference for grass
 ): number {
 	// ET only occurs if there's water and vegetation
+	// Guard against negative values that would cause NaN from Math.sqrt
 	if (vegetation <= 0 || saturation <= 0) return 0;
+
+	// Clamp saturation to valid range to prevent Math.sqrt(negative) = NaN
+	const safeSaturation = Math.max(0, Math.min(1, saturation));
 
 	// Actual ET depends on vegetation density and water availability
 	// At full vegetation and saturation: ET = potentialET
 	// Reduced proportionally by vegetation cover and available water
-	const actualET_mm_day = potentialET * vegetation * Math.sqrt(saturation);
+	const actualET_mm_day = potentialET * vegetation * Math.sqrt(safeSaturation);
 
 	// Convert mm/day to m/s for use with simulation time steps
 	// 1 mm/day = 1e-3 m / (24 * 3600 s) = 1.157e-8 m/s

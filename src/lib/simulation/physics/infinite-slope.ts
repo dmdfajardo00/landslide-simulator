@@ -55,6 +55,11 @@ export function calculateFoS(params: GeotechnicalParams, porePressure: number): 
 	// Calculate Factor of Safety
 	const fos = totalResistance / drivingForce;
 
+	// Guard against NaN/Infinity propagation
+	if (!isFinite(fos)) {
+		return fos > 0 ? 5.0 : 0.1;
+	}
+
 	// Clamp to realistic range [0.1, 5.0]
 	return Math.max(0.1, Math.min(5.0, fos));
 }

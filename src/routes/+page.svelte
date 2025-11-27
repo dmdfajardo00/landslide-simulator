@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import ViewportPlaceholder from '$lib/components/layout/ViewportPlaceholder.svelte';
 	import MetricsPanel from '$lib/components/layout/MetricsPanel.svelte';
@@ -370,6 +371,11 @@
 		} else if (!isRaining && !isTriggered) {
 			stopSimulation();
 		}
+	});
+
+	// Cleanup on component destroy to prevent memory leaks
+	onDestroy(() => {
+		stopSimulation();
 	});
 </script>
 

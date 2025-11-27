@@ -9,10 +9,21 @@
  * @returns Probability of Failure as a percentage (0-100)
  */
 export function calculatePoF(fos: number, cov: number): number {
+	// Guard against invalid inputs that would cause division by zero or NaN
+	if (cov <= 0 || fos <= 0) {
+		return fos < 1 ? 100 : 0; // If FoS < 1, failure is certain; otherwise safe
+	}
+
 	// Calculate reliability index (β)
 	// β represents the number of standard deviations between mean and failure point
 	// β = (FoS - 1) / (FoS × COV)
-	const beta = (fos - 1) / (fos * cov);
+	const denominator = fos * cov;
+	const beta = denominator > 0.0001 ? (fos - 1) / denominator : 0;
+
+	// Guard against NaN/Infinity propagation
+	if (!isFinite(beta)) {
+		return fos < 1 ? 100 : 0;
+	}
 
 	// Calculate probability of failure using standard normal CDF
 	// PoF = Φ(-β) where Φ is the cumulative distribution function

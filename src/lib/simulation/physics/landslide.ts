@@ -210,6 +210,11 @@ export function calculateTerrainDeformation(
 
 	const { startX, endX, headZ, toeZ, depth, length: slideLength } = failureZone;
 
+	// Guard against zero slideLength to prevent division by zero
+	if (slideLength <= 0) {
+		return { scarpDepth, depositionDepth };
+	}
+
 	// Deformation front progresses from head (top, high Z) toward toe (bottom, low Z)
 	const deformationFront = headZ - slideLength * progress;
 
@@ -217,14 +222,18 @@ export function calculateTerrainDeformation(
 	const fractures = [0.15, 0.28, 0.42, 0.55];
 	const fractureWidthNorm = 0.025;
 
+	// Guard against division by zero for grid dimensions
+	const widthDenom = Math.max(1, width - 1);
+	const heightDenom = Math.max(1, height - 1);
+
 	for (let gz = 0; gz < height; gz++) {
 		for (let gx = 0; gx < width; gx++) {
-			const worldX = (gx / (width - 1)) * worldScale;
-			const worldZ = (gz / (height - 1)) * worldScale;
+			const worldX = (gx / widthDenom) * worldScale;
+			const worldZ = (gz / heightDenom) * worldScale;
 			const idx = gz * width + gx;
 
 			// Check if within failure zone X bounds (with soft edges)
-			const xMargin = (endX - startX) * 0.1;
+			const xMargin = Math.max(0.001, (endX - startX) * 0.1); // Guard against zero margin
 			let xFactor = 1.0;
 			if (worldX < startX) {
 				xFactor = Math.max(0, 1 - (startX - worldX) / xMargin);
@@ -244,10 +253,11 @@ export function calculateTerrainDeformation(
 			// ========== HEAD SCARP ZONE (relativeZ 0-0.12) ==========
 			// Near-vertical drop at TOP of slope where terrain broke away
 			if (relativeZ >= -0.02 && relativeZ <= 0.12) {
-				const scarpRelZ = (relativeZ + 0.02) / 0.14;
+				const scarpRelZ = Math.max(0, Math.min(1, (relativeZ + 0.02) / 0.14));
 
 				// Steep exponential curve for dramatic back wall
-				const scarpCurve = Math.pow(1 - scarpRelZ, 3.5);
+				// Guard: ensure base is non-negative to prevent NaN from fractional power
+				const scarpCurve = Math.pow(Math.max(0, 1 - scarpRelZ), 3.5);
 
 				// Head scarp is 70-100% of failure depth
 				const headScarpDepth = depth * (0.7 + progress * 0.3);
@@ -267,8 +277,9 @@ export function calculateTerrainDeformation(
 				for (const fracturePos of fractures) {
 					if (relativeZ > fracturePos - fractureWidthNorm && relativeZ <= fracturePos + fractureWidthNorm) {
 						isInFracture = true;
-						const fractureRelPos = (relativeZ - (fracturePos - fractureWidthNorm)) / (fractureWidthNorm * 2);
-						const fractureCurve = Math.pow(1 - fractureRelPos, 2.5);
+						const fractureRelPos = Math.max(0, Math.min(1, (relativeZ - (fracturePos - fractureWidthNorm)) / (fractureWidthNorm * 2)));
+						// Guard: ensure base is non-negative to prevent NaN
+						const fractureCurve = Math.pow(Math.max(0, 1 - fractureRelPos), 2.5);
 						const fractureDepthRatio = 0.4 - (fracturePos * 0.3);
 						blockDepth = depth * fractureDepthRatio * fractureCurve;
 						break;
@@ -286,7 +297,9 @@ export function calculateTerrainDeformation(
 						}
 					}
 
-					const blockRelZ = (relativeZ - blockStart) / (blockEnd - blockStart);
+					// Guard against division by zero
+					const blockDenom = Math.max(0.001, blockEnd - blockStart);
+					const blockRelZ = (relativeZ - blockStart) / blockDenom;
 					const rotationTilt = 0.3 + blockRelZ * 0.5;
 					const depthFactor = Math.max(0, 0.5 - (relativeZ - 0.12) / 1.0);
 					blockDepth = depth * depthFactor * rotationTilt;

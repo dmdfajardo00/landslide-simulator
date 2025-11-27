@@ -88,6 +88,7 @@
 	let aiQuestion = $state('');
 	let aiStreamedText = $state('');
 	let aiStreamInterval: ReturnType<typeof setInterval> | null = null;
+	let aiLoadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	const aiDemoText = `**Understanding Slope Stability Analysis**
 
@@ -106,12 +107,23 @@ Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deseru
 Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium. **Vegetation cover** plays a crucial role in slope stabilization through root reinforcement and rainfall interception. Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Proper drainage systems and retaining structures can significantly improve slope stability.`;
 
 	function startAIStream() {
+		// Clear any existing timers to prevent accumulation
+		if (aiLoadingTimeout) {
+			clearTimeout(aiLoadingTimeout);
+			aiLoadingTimeout = null;
+		}
+		if (aiStreamInterval) {
+			clearInterval(aiStreamInterval);
+			aiStreamInterval = null;
+		}
+
 		aiLoading = true;
 		aiStreamedText = '';
 
 		// Simulate loading delay
-		setTimeout(() => {
+		aiLoadingTimeout = setTimeout(() => {
 			aiLoading = false;
+			aiLoadingTimeout = null;
 			let charIndex = 0;
 
 			// Stream text character by character
@@ -133,10 +145,16 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
 
 	function closeAIModal() {
 		showAI = false;
+		// Clear both timeout and interval to prevent leaks
+		if (aiLoadingTimeout) {
+			clearTimeout(aiLoadingTimeout);
+			aiLoadingTimeout = null;
+		}
 		if (aiStreamInterval) {
 			clearInterval(aiStreamInterval);
 			aiStreamInterval = null;
 		}
+		aiLoading = false;
 		aiStreamedText = '';
 		aiQuestion = '';
 	}
