@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import type {
 		Map as MapLibreMap,
 		MapLayerMouseEvent,
@@ -160,59 +160,77 @@
 				}
 			});
 
-			// Mouse move event for hover
-			map.on('mousemove', MAP_LAYER_IDS.HAZARD_FILL, (e: MapLayerMouseEvent) => {
-				if (!mapInstance || !e.features?.length) return;
+			// Helper to build combined hover filter (hazard filter + ID filter)
+			function buildHoverFilter(featureId: string | number | null): FilterSpecification {
+				const idFilter: FilterSpecification = featureId !== null
+					? ['==', ['id'], featureId]
+					: ['==', ['literal', 1], 0]; // Never match when no ID
 
-				mapInstance.getCanvas().style.cursor = 'pointer';
-
-				const feature = e.features[0];
-				if (hoveredFeatureId !== feature.id) {
-					if (hoveredFeatureId !== null) {
-						mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
-					}
-					hoveredFeatureId = feature.id ?? null;
-					mapInstance.setFilter('hazard-hover', ['==', ['id'], hoveredFeatureId]);
-					onFeatureHover?.(feature);
+				// Combine with current hazard filter if active
+				if (hazardFilter && hazardFilter.length > 0) {
+					const hazardFilterExpr = buildHazardFilter(hazardFilter);
+					return ['all', hazardFilterExpr, idFilter] as unknown as FilterSpecification;
 				}
-			});
+				return idFilter;
+			}
 
-			// Mouse leave event
-			map.on('mouseleave', MAP_LAYER_IDS.HAZARD_FILL, () => {
+			// Helper to clear hover state
+			function clearHoverState() {
 				if (!mapInstance) return;
 				mapInstance.getCanvas().style.cursor = '';
+				mapInstance.setFilter('hazard-hover', buildHoverFilter(null));
 				if (hoveredFeatureId !== null) {
-					mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
 					hoveredFeatureId = null;
 					onFeatureHover?.(null);
 				}
+			}
+
+			// Helper to set hover state
+			function setHoverState(feature: MapGeoJSONFeature) {
+				if (!mapInstance) return;
+				mapInstance.getCanvas().style.cursor = 'pointer';
+				const newId = feature.id ?? null;
+				if (hoveredFeatureId !== newId) {
+					hoveredFeatureId = newId;
+					mapInstance.setFilter('hazard-hover', buildHoverFilter(newId));
+					onFeatureHover?.(feature);
+				}
+			}
+
+			// Mouse move event for hover - only fires when over a feature
+			map.on('mousemove', MAP_LAYER_IDS.HAZARD_FILL, (e: MapLayerMouseEvent) => {
+				if (!mapInstance || !e.features?.length) return;
+				setHoverState(e.features[0]);
 			});
 
-			// Global mouse move to clear hover when not over any feature
+			// Mouse leave event - fires when leaving all features in the layer
+			map.on('mouseleave', MAP_LAYER_IDS.HAZARD_FILL, () => {
+				clearHoverState();
+			});
+
+			// Global mouse move - check on EVERY move if we're still over a feature
 			map.on('mousemove', (e: MapMouseEvent) => {
-				if (!mapInstance || hoveredFeatureId === null) return;
+				if (!mapInstance || !isMapLoaded) return;
 
-				// Check if hazard layer exists before querying
+				// Always check if we're over a hazard feature
 				const layerExists = mapInstance.getLayer(MAP_LAYER_IDS.HAZARD_FILL);
-				let features: MapGeoJSONFeature[] = [];
-
-				if (layerExists) {
-					try {
-						features = mapInstance.queryRenderedFeatures(e.point, {
-							layers: [MAP_LAYER_IDS.HAZARD_FILL]
-						});
-					} catch {
-						// Layer might not be queryable, treat as no features
-						features = [];
-					}
+				if (!layerExists) {
+					if (hoveredFeatureId !== null) clearHoverState();
+					return;
 				}
 
-				// If cursor is not over any hazard feature, clear hover
-				if (!features.length) {
-					mapInstance.getCanvas().style.cursor = '';
-					mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
-					hoveredFeatureId = null;
-					onFeatureHover?.(null);
+				let features: MapGeoJSONFeature[] = [];
+				try {
+					features = mapInstance.queryRenderedFeatures(e.point, {
+						layers: [MAP_LAYER_IDS.HAZARD_FILL]
+					});
+				} catch {
+					features = [];
+				}
+
+				// If not over any hazard feature, clear hover
+				if (!features.length && hoveredFeatureId !== null) {
+					clearHoverState();
 				}
 			});
 
@@ -236,11 +254,7 @@
 
 			// Clear hover state when leaving the map canvas entirely
 			map.on('mouseout', () => {
-				if (!mapInstance || hoveredFeatureId === null) return;
-				mapInstance.getCanvas().style.cursor = '';
-				mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
-				hoveredFeatureId = null;
-				onFeatureHover?.(null);
+				clearHoverState();
 			});
 		} catch (err) {
 			console.error('Error initializing map:', err);
@@ -265,8 +279,11 @@
 		const filterExpr = buildHazardFilter(filters);
 		const visibility = filters.length === 0 ? 'none' : 'visible';
 
+		// Read hoveredFeatureId without tracking to avoid re-running effect on hover changes
+		const currentHoveredId = untrack(() => hoveredFeatureId);
+
 		// If everything is hidden, also clear hover state
-		if (filters.length === 0 && hoveredFeatureId !== null) {
+		if (filters.length === 0 && currentHoveredId !== null) {
 			mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
 			hoveredFeatureId = null;
 			onFeatureHover?.(null);
@@ -281,12 +298,8 @@
 
 		if (mapInstance.getLayer('hazard-hover')) {
 			mapInstance.setLayoutProperty('hazard-hover', 'visibility', visibility);
-			const hoverFilter = [
-				'all',
-				filterExpr as unknown,
-				['==', ['id'], hoveredFeatureId ?? '']
-			] as unknown as FilterSpecification;
-			mapInstance.setFilter('hazard-hover', hoverFilter);
+			// Clear hover highlight when filters change - let event handlers re-establish if needed
+			mapInstance.setFilter('hazard-hover', ['==', ['literal', 1], 0]);
 		}
 
 		if (mapInstance.getLayer(MAP_LAYER_IDS.HAZARD_SELECTED)) {
