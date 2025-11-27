@@ -31,24 +31,24 @@
 	const GRAVITY = 30; // World units per second squared
 	const FRICTION = 0.6; // Ground friction coefficient
 	const RESTITUTION = 0.3; // Bounce factor
-	const MAX_PARTICLES = 400; // Realistic amount
-	const MAX_BOULDERS = 40; // Occasional large rocks only
+	const MAX_PARTICLES = 150; // Reduced for performance
+	const MAX_BOULDERS = 15; // Reduced for performance
 
-	// Debris colors - VISIBLE BROWNS against green terrain
-	const ROCK_COLOR = new THREE.Color(0x8b6b4f); // Warm brown - visible
-	const SOIL_COLOR = new THREE.Color(0x9a7a5a); // Tan/brown - very visible
+	// Debris colors - realistic dark brown rock tones
+	const ROCK_COLOR = new THREE.Color(0x7a6352); // Medium brown
+	const SOIL_COLOR = new THREE.Color(0x6b5344); // Dark brown
 
-	// Boulder color variations - BRIGHT and visible
+	// Boulder color variations - darker realistic brown rock colors
 	const BOULDER_COLORS = [
-		new THREE.Color(0x9a8a7a), // Light tan - very visible
-		new THREE.Color(0xaa8a5a), // Bright tan/brown - visible against green
-		new THREE.Color(0x8a6a4a)  // Medium brown
+		new THREE.Color(0x6b5344), // Dark brown
+		new THREE.Color(0x7a6352), // Medium brown
+		new THREE.Color(0x5c4d3d)  // Brown-gray
 	];
 
 	// Pre-create shared geometries
 	const rockGeometry = new THREE.IcosahedronGeometry(1, 0);
 	const soilGeometry = new THREE.SphereGeometry(1, 4, 3);
-	const boulderGeometry = new THREE.IcosahedronGeometry(1, 1); // More angular with detail 1
+	const boulderGeometry = new THREE.IcosahedronGeometry(1, 0); // Angular rocks (detail 0)
 
 	// Shared materials - with emissive for visibility
 	const rockMaterial = new THREE.MeshStandardMaterial({
@@ -91,6 +91,7 @@
 	let particles: DebrisParticle[] = [];
 	let particleIdCounter = 0;
 	let spawnAccumulator = 0;
+	let frameCounter = 0;
 
 	// Initialize meshes once
 	function initializeMeshes() {
@@ -99,11 +100,13 @@
 			rockMesh.count = 0;
 			rockMesh.castShadow = true;
 			rockMesh.receiveShadow = true;
+			rockMesh.frustumCulled = false; // Prevent disappearing at camera angles
 		}
 		if (!soilMesh) {
 			soilMesh = new THREE.InstancedMesh(soilGeometry, soilMaterial, MAX_PARTICLES);
 			soilMesh.count = 0;
 			soilMesh.castShadow = true;
+			soilMesh.frustumCulled = false; // Prevent disappearing at camera angles
 		}
 		// Initialize boulder meshes for each color variation
 		if (boulderMeshes.length === 0) {
@@ -112,6 +115,7 @@
 				mesh.count = 0;
 				mesh.castShadow = true;
 				mesh.receiveShadow = true;
+				mesh.frustumCulled = false; // Prevent disappearing at camera angles
 				mesh.renderOrder = 1; // Render boulders on top for better visibility
 				return mesh;
 			});
@@ -131,19 +135,19 @@
 		return heightmap[idx] * maxElevation;
 	}
 
-	// Calculate spawn rate based on phase - REALISTIC amounts
+	// Calculate spawn rate based on phase - optimized for performance
 	function getSpawnRate(): number {
 		if (progress < 0.2) {
 			// Initiating phase: sparse initial debris
-			return 15;
+			return 5;
 		} else if (progress < 0.7) {
 			// Flowing phase: moderate spawn rate
 			const phaseProgress = (progress - 0.2) / 0.5;
-			return 40 + phaseProgress * 30; // 40-70 particles/sec
+			return 10 + phaseProgress * 10; // 10-20 particles/sec
 		} else if (progress < 1.0) {
 			// Depositing phase: decreasing spawn rate
 			const phaseProgress = (progress - 0.7) / 0.3;
-			return 30 - phaseProgress * 20; // 30 → 10 particles/sec
+			return 10 - phaseProgress * 7; // 10 → 3 particles/sec
 		}
 		// Complete phase: no spawning
 		return 0;
@@ -406,13 +410,19 @@
 
 		initializeMeshes();
 
+		// Frame skipping for spawning - only spawn every other frame
+		frameCounter++;
+		const shouldSpawn = frameCounter % 2 === 0;
+
 		// Spawn new particles with phase-based spawn rate
-		const currentSpawnRate = getSpawnRate();
-		if (currentSpawnRate > 0) {
-			spawnAccumulator += delta * currentSpawnRate;
-			while (spawnAccumulator >= 1 && particles.length < MAX_PARTICLES) {
-				spawnParticle();
-				spawnAccumulator -= 1;
+		if (shouldSpawn) {
+			const currentSpawnRate = getSpawnRate();
+			if (currentSpawnRate > 0) {
+				spawnAccumulator += delta * currentSpawnRate;
+				while (spawnAccumulator >= 1 && particles.length < MAX_PARTICLES) {
+					spawnParticle();
+					spawnAccumulator -= 1;
+				}
 			}
 		}
 
@@ -466,18 +476,18 @@
 </script>
 
 <!-- Rock debris -->
-{#if rockMesh && rockMesh.count > 0}
+{#if rockMesh}
 	<T is={rockMesh} />
 {/if}
 
 <!-- Soil debris -->
-{#if soilMesh && soilMesh.count > 0}
+{#if soilMesh}
 	<T is={soilMesh} />
 {/if}
 
 <!-- Boulder debris (multiple color variants) -->
 {#each boulderMeshes as boulderMesh}
-	{#if boulderMesh && boulderMesh.count > 0}
+	{#if boulderMesh}
 		<T is={boulderMesh} />
 	{/if}
 {/each}

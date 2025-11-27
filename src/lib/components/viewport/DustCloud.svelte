@@ -34,13 +34,13 @@
 		maxElevation = 50
 	}: Props = $props();
 
-	// Dust configuration
-	const MAX_PARTICLES = 600;
-	const SPAWN_RATE = 80; // Particles per second during flowing phase
-	const DUST_COLOR = new THREE.Color(0xc4a882); // Tan/brown dusty color
-	const RISE_SPEED = 3.0; // Base upward velocity
-	const DRIFT_SPEED = 1.5; // Horizontal drift variation
-	const FADE_DURATION = 3.0; // Seconds for particle to fade out
+	// Dust configuration - synced with debris timing
+	const MAX_PARTICLES = 300; // Reduced for subtler effect
+	const SPAWN_RATE = 40; // Particles per second during flowing phase
+	const DUST_COLOR = new THREE.Color(0xb8a080); // Slightly more brown dusty color
+	const RISE_SPEED = 2.5; // Base upward velocity
+	const DRIFT_SPEED = 1.0; // Horizontal drift variation
+	const FADE_DURATION = 2.5; // Seconds for particle to fade out
 
 	// Particle pool
 	let particles: DustParticle[] = [];
@@ -221,11 +221,21 @@
 
 		initialize();
 
-		// Spawn dust during flowing phase (progress 0.2-0.7)
-		// More dust at deformation front
-		if (progress >= 0.2 && progress <= 0.7) {
-			const flowingIntensity = Math.sin((progress - 0.2) / 0.5 * Math.PI); // Peak at 0.45
-			const spawnRate = SPAWN_RATE * flowingIntensity;
+		// Spawn dust synced with debris timing (progress 0.15-0.8)
+		// More dust during active flow, tapering at end
+		if (progress >= 0.15 && progress <= 0.85) {
+			let spawnIntensity = 0;
+			if (progress < 0.25) {
+				// Ramp up: 0.15-0.25
+				spawnIntensity = (progress - 0.15) / 0.10;
+			} else if (progress < 0.7) {
+				// Peak: 0.25-0.7
+				spawnIntensity = 0.8 + Math.sin((progress - 0.25) / 0.45 * Math.PI) * 0.2;
+			} else {
+				// Taper: 0.7-0.85
+				spawnIntensity = 1 - (progress - 0.7) / 0.15;
+			}
+			const spawnRate = SPAWN_RATE * spawnIntensity;
 
 			spawnAccumulator += delta * spawnRate;
 			while (spawnAccumulator >= 1 && particles.length < MAX_PARTICLES) {
@@ -241,12 +251,16 @@
 		updateGeometry();
 	});
 
-	// Reset when isActive changes to false
+	// Reset when isActive changes to false - clear ALL dust
 	$effect(() => {
 		if (!isActive) {
 			particles = [];
 			spawnAccumulator = 0;
 			particleIdCounter = 0;
+			// Also clear geometry immediately
+			if (pointsGeometry) {
+				pointsGeometry.setDrawRange(0, 0);
+			}
 		}
 	});
 
