@@ -577,24 +577,24 @@
 						<h2 class="text-lg font-bold text-neutral-900 mb-4">Formulas & Theory</h2>
 						<div class="space-y-6 text-neutral-700 font-mono text-xs">
 							<div>
-								<h3 class="font-bold text-neutral-900">Infinite Slope Analysis</h3>
-								<p class="mt-2">FoS = (c + γ·h·cosθ·(1-ru)·tanφ) / (γ·h·sinθ·cosθ)</p>
-								<p class="text-[11px] mt-1 text-neutral-500">Where: c = cohesion, γ = unit weight, h = height, θ = angle, ru = pore pressure ratio, φ = friction angle</p>
+								<h3 class="font-bold text-neutral-900">Factor of Safety (Infinite Slope)</h3>
+								<p class="mt-2">FoS = [c' + (γ·z·cos²β - u)·tan φ'] / [γ·z·sin β·cos β]</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: c' = effective cohesion, γ = unit weight, z = soil depth, β = slope angle, u = pore pressure, φ' = friction angle</p>
 							</div>
 							<div>
 								<h3 class="font-bold text-neutral-900">Pore Pressure Ratio</h3>
-								<p class="mt-2">ru = Pw / (γ·h)</p>
-								<p class="text-[11px] mt-1 text-neutral-500">Where: Pw = pore water pressure, γ = unit weight of water, h = height of soil</p>
+								<p class="mt-2">rᵤ = u / (γ × z)</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: u = γw × hw (pore water pressure), γw = water unit weight (9.81 kN/m³), hw = saturation depth</p>
 							</div>
 							<div>
-								<h3 class="font-bold text-neutral-900">Probability of Failure (First-Order Second-Moment)</h3>
-								<p class="mt-2">PoF = Φ(-β) where β = (μ_FoS) / σ_FoS</p>
-								<p class="text-[11px] mt-1 text-neutral-500">Where: μ = mean, σ = standard deviation, Φ = standard normal CDF</p>
+								<h3 class="font-bold text-neutral-900">Probability of Failure (FOSM)</h3>
+								<p class="mt-2">PoF = Φ(-β) where β = (FoS - 1) / σ_FoS</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: σ_FoS = FoS × CoV (standard deviation), CoV = coefficient of variation (0.15), Φ = standard normal CDF</p>
 							</div>
 							<div>
-								<h3 class="font-bold text-neutral-900">Vegetation Effect on Cohesion</h3>
-								<p class="mt-2">c' = c + c_root·V</p>
-								<p class="text-[11px] mt-1 text-neutral-500">Where: c' = effective cohesion, c_root = root cohesion, V = vegetation coverage %</p>
+								<h3 class="font-bold text-neutral-900">Effective Cohesion</h3>
+								<p class="mt-2">c' = max(c₀×0.15, (c₀ + c_root) × Sf)</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: c₀ = base cohesion, c_root = V × 12 kPa, Sf = 1 - 0.85 × rᵤ^1.5 (saturation factor)</p>
 							</div>
 						</div>
 					</div>
@@ -630,6 +630,36 @@
 								<li><strong>Pore Pressure:</strong> Water pressure within soil affects shear strength and failure</li>
 								<li><strong>Slope Angle:</strong> Steeper slopes are more susceptible to failure</li>
 								<li><strong>Vegetation:</strong> Root systems increase soil cohesion and stability</li>
+							</ul>
+
+							<h3 class="font-semibold text-neutral-900 mt-6">Geotechnical Parameters</h3>
+
+							<h4 class="font-medium text-neutral-800 mt-4">Slope Geometry</h4>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Slope Angle (θ):</strong> 15-75° - Controls gravitational component along slope</li>
+								<li><strong>Soil Depth (H):</strong> 0.8-5m - Thickness of potentially failing soil layer</li>
+							</ul>
+
+							<h4 class="font-medium text-neutral-800 mt-4">Soil Properties</h4>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Cohesion (c):</strong> 0-50 kPa - Internal soil strength independent of stress</li>
+								<li><strong>Friction Angle (φ):</strong> 15-45° - Angle of internal friction</li>
+								<li><strong>Unit Weight (γ):</strong> 10-25 kN/m³ - Weight per unit volume of soil</li>
+								<li><strong>Porosity (n):</strong> 0.1-0.6 - Fraction of soil volume that is void space</li>
+							</ul>
+
+							<h4 class="font-medium text-neutral-800 mt-4">Hydrological Factors</h4>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Rainfall Intensity (I):</strong> 0-100 mm/hr - Rate of water input</li>
+								<li><strong>Pore Pressure (u):</strong> Water pressure in soil pores reducing effective stress</li>
+								<li><strong>Saturation Depth:</strong> Depth of water-saturated soil layer</li>
+							</ul>
+
+							<h4 class="font-medium text-neutral-800 mt-4">Vegetation</h4>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Coverage (%):</strong> 0-100% - Density of plant cover on slope</li>
+								<li><strong>Root Strength:</strong> Contributes up to 12 kPa additional cohesion at 100% coverage</li>
+								<li><strong>Interception:</strong> Vegetation intercepts up to 30% of rainfall</li>
 							</ul>
 						</div>
 					</div>
