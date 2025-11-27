@@ -1,4 +1,4 @@
-import { OPENROUTER_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
 const SYSTEM_PROMPT = `You are Dr. Terra, a senior engineering geologist with 25+ years of field experience in slope stability and landslide hazard assessment. You speak directly and practically—like a seasoned professional explaining concepts to a graduate student in the field.
@@ -42,7 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
 			method: 'POST',
 			headers: {
-				Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+				Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
 				'Content-Type': 'application/json',
 				'HTTP-Referer': 'https://landslide-simulator.vercel.app',
 				'X-Title': 'Landslide Simulator'
