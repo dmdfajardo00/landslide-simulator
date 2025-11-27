@@ -58,7 +58,8 @@ Here's the key insight: water infiltration depends on whichever is smaller - the
 We use the First-Order Second-Moment method, which sounds fancy but basically accounts for uncertainty:
 
 ```
-PoF = Φ[(1 - μ_FoS) / σ_FoS]
+β = (μ_FoS - 1) / σ_FoS
+PoF = Φ(-β)
 
 where σ_FoS = CoV × μ_FoS
 ```

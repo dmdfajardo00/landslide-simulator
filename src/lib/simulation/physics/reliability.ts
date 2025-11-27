@@ -18,7 +18,10 @@ export function calculatePoF(fos: number, cov: number): number {
 	// β represents the number of standard deviations between mean and failure point
 	// β = (FoS - 1) / (FoS × COV)
 	const denominator = fos * cov;
-	const beta = denominator > 0.0001 ? (fos - 1) / denominator : 0;
+	// When uncertainty (denominator) is negligible, use deterministic logic:
+	// If FoS >= 1, slope is stable (β → +∞, PoF → 0%)
+	// If FoS < 1, slope fails (β → -∞, PoF → 100%)
+	const beta = denominator > 0.0001 ? (fos - 1) / denominator : (fos >= 1 ? 10 : -10);
 
 	// Guard against NaN/Infinity propagation
 	if (!isFinite(beta)) {

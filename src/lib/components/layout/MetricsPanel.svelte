@@ -96,7 +96,10 @@
 	// PoF calculation breakdown
 	const pofBreakdown = $derived(() => {
 		const sigma = fos * cov;
-		const beta = sigma > 0.0001 ? (fos - 1) / sigma : 0;
+		// When uncertainty (sigma) is negligible, use deterministic logic:
+		// If FoS >= 1, slope is stable (PoF → 0%, beta → +∞)
+		// If FoS < 1, slope fails (PoF → 100%, beta → -∞)
+		const beta = sigma > 0.0001 ? (fos - 1) / sigma : (fos >= 1 ? 10 : -10);
 		return { sigma, beta, cov };
 	});
 
@@ -525,39 +528,40 @@
 {#if showModal}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showModal = false)}></div>
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onclick={() => (showModal = false)}>
-		<div class="bg-white rounded-lg shadow-xl flex flex-col sm:flex-row h-full max-h-[95vh] sm:max-h-[90vh] w-full sm:max-w-4xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
-			<!-- Sidebar Tabs - Hidden on mobile, shown on sm+ -->
-			<div class="hidden sm:flex sm:w-48 border-r border-neutral-200 bg-neutral-50 flex-col">
-				<div class="px-4 py-3 border-b border-neutral-200">
-					<h3 class="text-sm font-semibold text-neutral-900">Documentation</h3>
-				</div>
-				<nav class="flex-1 space-y-1 p-2 overflow-y-auto">
-					{#each [
-						{ id: 'student', label: 'Student Guide' },
-						{ id: 'formulas', label: 'Formulas & Theory' },
-						{ id: 'info', label: 'Simulation Info' },
-						{ id: 'parameters', label: 'Key Concepts' }
-					] as tab}
-						<button
-							onclick={() => (activeTab = tab.id)}
-							class="w-full px-3 py-2 text-left text-xs font-medium rounded transition-colors {activeTab === tab.id
-								? 'bg-white text-neutral-900 border border-neutral-200'
-								: 'text-neutral-600 hover:bg-neutral-100'}"
-						>
-							{tab.label}
-						</button>
-					{/each}
-				</nav>
+		<div class="bg-white rounded-lg shadow-xl flex flex-col h-full max-h-[95vh] sm:max-h-[90vh] w-full sm:max-w-4xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
+			<!-- Header with Close Button -->
+			<div class="px-4 py-3 border-b border-neutral-200 bg-neutral-50 flex items-center justify-between sticky top-0 z-10">
+				<h3 class="text-sm font-semibold text-neutral-900">Documentation</h3>
 				<button
 					onclick={() => (showModal = false)}
-					class="m-2 px-3 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded transition-colors"
+					class="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900"
+					aria-label="Close documentation"
 				>
-					Close
+					<Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
 				</button>
 			</div>
 
+			<!-- Tabs - Visible on all sizes -->
+			<nav class="flex gap-1 p-2 border-b border-neutral-200 bg-neutral-50 overflow-x-auto">
+				{#each [
+					{ id: 'student', label: 'Student Guide' },
+					{ id: 'formulas', label: 'Formulas & Theory' },
+					{ id: 'info', label: 'Simulation Info' },
+					{ id: 'parameters', label: 'Key Concepts' }
+				] as tab}
+					<button
+						onclick={() => (activeTab = tab.id)}
+						class="px-3 py-2 text-xs font-medium whitespace-nowrap rounded transition-colors {activeTab === tab.id
+							? 'bg-white text-neutral-900 border border-neutral-200'
+							: 'text-neutral-600 hover:bg-neutral-100'}"
+					>
+						{tab.label}
+					</button>
+				{/each}
+			</nav>
+
 			<!-- Content Area -->
-			<div class="flex-1 overflow-y-auto p-6">
+			<div class="flex-1 overflow-y-auto p-4 sm:p-6">
 				{#if activeTab === 'student'}
 					<div class="prose prose-sm max-w-none">
 						<h2 class="text-lg font-bold text-neutral-900 mb-4">Student Guide</h2>

@@ -6,10 +6,10 @@ import type { GeotechnicalParams } from './types';
  * The FoS represents the ratio of resisting forces to driving forces on a slope.
  * Values > 1.0 indicate stability, < 1.0 indicate potential failure.
  *
- * Formula: FoS = [c' + (γ·H·cos²θ - Pw)·tan(φ')] / [γ·H·sin(θ)·cos(θ)]
+ * Formula: FoS = [c' + (γ·z·cos²β - u)·tan(φ')] / [γ·z·sin(β)·cos(β)]
  *
  * @param params - Geotechnical parameters including slope geometry and soil properties
- * @param porePressure - Pore water pressure (Pw) in kPa
+ * @param porePressure - Pore water pressure (u) in kPa
  * @returns Factor of Safety value clamped between 0.1 and 5.0
  */
 export function calculateFoS(params: GeotechnicalParams, porePressure: number): number {
@@ -24,17 +24,17 @@ export function calculateFoS(params: GeotechnicalParams, porePressure: number): 
 	}
 
 	// Convert angles to radians
-	const thetaRad = (slopeAngle * Math.PI) / 180;
+	const betaRad = (slopeAngle * Math.PI) / 180;
 	const phiRad = (frictionAngle * Math.PI) / 180;
 
 	// Calculate trigonometric values
-	const sinTheta = Math.sin(thetaRad);
-	const cosTheta = Math.cos(thetaRad);
-	const cos2Theta = cosTheta * cosTheta;
+	const sinBeta = Math.sin(betaRad);
+	const cosBeta = Math.cos(betaRad);
+	const cos2Beta = cosBeta * cosBeta;
 	const tanPhi = Math.tan(phiRad);
 
 	// Calculate normal stress component
-	const normalStress = unitWeight * soilDepth * cos2Theta;
+	const normalStress = unitWeight * soilDepth * cos2Beta;
 
 	// Calculate effective normal stress (accounting for pore pressure)
 	const effectiveNormalStress = normalStress - porePressure;
@@ -45,7 +45,7 @@ export function calculateFoS(params: GeotechnicalParams, porePressure: number): 
 	const totalResistance = cohesiveResistance + frictionalResistance;
 
 	// Calculate driving forces
-	const drivingForce = unitWeight * soilDepth * sinTheta * cosTheta;
+	const drivingForce = unitWeight * soilDepth * sinBeta * cosBeta;
 
 	// Avoid division by zero
 	if (drivingForce <= 0.001) {

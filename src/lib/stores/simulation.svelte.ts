@@ -264,10 +264,9 @@ function createSimulationStore() {
     const { ru } = simulationState;
 
     // Calculate pore pressure from ru
-    // ru = Pw / (γ·z·cos²θ), so Pw = ru · γ · z · cos²θ
-    const thetaRad = (slopeAngle * Math.PI) / 180;
-    const cos2Theta = Math.cos(thetaRad) * Math.cos(thetaRad);
-    const porePressure = ru * unitWeight * soilDepth * cos2Theta;
+    // Standard definition: ru = u / (γ × z), therefore u = ru × γ × z
+    // Note: The slope angle does NOT affect the definition of ru itself
+    const porePressure = ru * unitWeight * soilDepth;
 
     // Use physics module implementation
     return calculateFoSPhysics(

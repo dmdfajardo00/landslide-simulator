@@ -35,8 +35,8 @@ export function updateInfiltration(
 	const effectiveRainfall = rainfallIntensity * (1 - interceptionFraction);
 
 	// Convert hydraulic conductivity from ×10⁻⁶ m/s to mm/hr
-	// 1 m/s = 3,600,000 mm/hr
-	const k_mmhr = hydraulicConductivity * 3600;
+	// Input K is in units of 10⁻⁶ m/s, so: K × 10⁻⁶ m/s × 3,600,000 mm/hr per m/s = K × 3.6 mm/hr
+	const k_mmhr = hydraulicConductivity * 3.6;
 
 	// Calculate current saturation ratio (guard against division by zero)
 	const saturationRatio = soilDepth > 0 ? state.saturationDepth / soilDepth : 1;
