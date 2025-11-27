@@ -171,10 +171,20 @@
 		// Calculate effective cohesion with improved geotechnical model
 		// Uses exponential decay to model matric suction loss in unsaturated soils
 		// Includes minimum cohesion floor to maintain residual strength
+		// Root cohesion from vegetation (0-12 kPa based on literature values for grassland/forest)
+		const rootCohesion = (vegetationCover / 100) * 12; // 0-12 kPa
+
+		// Erosion reduces soil cohesion (weathered/loosened structure)
+		const erosionCohesionFactor = 1 - (erosion / 100) * 0.5; // Up to 50% reduction
+
+		// Saturation effect (matric suction loss at high pore pressure)
 		const saturationEffect = Math.pow(ru, 1.5); // Non-linear reduction (accelerates at high ru)
 		const minCohesionRatio = 0.15; // Cohesion retains at least 15% of input (residual strength)
-		const reductionFactor = 1 - (1 - minCohesionRatio) * saturationEffect;
-		cohesion = cohesionInput * Math.max(minCohesionRatio, reductionFactor);
+		const saturationFactor = 1 - (1 - minCohesionRatio) * saturationEffect;
+
+		// Final cohesion: base soil (with erosion degradation) + root cohesion, reduced by saturation
+		const baseCohesion = cohesionInput * erosionCohesionFactor;
+		cohesion = Math.max(cohesionInput * minCohesionRatio, (baseCohesion + rootCohesion) * saturationFactor);
 
 		// Calculate Factor of Safety
 		fos = calculateFoS(
@@ -328,12 +338,14 @@
 
 		// Recalculate initial state with effective parameters
 		ru = 0;
-		cohesion = cohesionInput;
+		const rootCohesion = (vegetationCover / 100) * 12; // 0-12 kPa
+		const erosionCohesionFactor = 1 - (erosion / 100) * 0.5;
+		cohesion = cohesionInput * erosionCohesionFactor + rootCohesion;
 		const effectiveSoilDepth = soilDepth * (1 - (erosion / 100) * 0.40);
 		const effectiveK = hydraulicConductivity * (1 + (erosion / 100) * 0.50);
 		const effectiveFrictionAngle = frictionAngle * (1 - (erosion / 100) * 0.15);
 		fos = calculateFoS(
-			{ slopeAngle, soilDepth: effectiveSoilDepth, unitWeight, cohesion: cohesionInput, frictionAngle: effectiveFrictionAngle, hydraulicConductivity: effectiveK },
+			{ slopeAngle, soilDepth: effectiveSoilDepth, unitWeight, cohesion, frictionAngle: effectiveFrictionAngle, hydraulicConductivity: effectiveK },
 			0
 		);
 		pof = calculatePoF(fos, coefficientOfVariation);
@@ -342,8 +354,8 @@
 
 	// Initialize physics on mount and when parameters change
 	$effect(() => {
-		// Recalculate when any geotechnical parameter changes
-		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation, soilMoisture];
+		// Recalculate when any geotechnical or environmental parameter changes
+		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation, soilMoisture, vegetationCover, erosion, hydraulicConductivity];
 		if (!isRaining && !isTriggered) {
 			// Reset saturation depth when moisture changes
 			hydrologicalState.saturationDepth = (soilMoisture / 100) * soilDepth;

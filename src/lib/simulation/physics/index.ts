@@ -8,7 +8,7 @@ export { calculateFoS } from './infinite-slope';
 export { calculatePorePressure } from './pore-pressure';
 
 // Infiltration modeling
-export { updateInfiltration } from './infiltration';
+export { updateInfiltration, calculateEvapotranspiration } from './infiltration';
 
 // Reliability analysis
 export { calculatePoF } from './reliability';
