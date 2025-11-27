@@ -52,8 +52,10 @@
 	let boulderDensity = $state(15);
 
 	// Hydrological state for physics calculations
+	// Initial saturation based on soil moisture parameter
+	// soilMoisture (0-100%) maps to fraction of soil depth that is saturated
 	let hydrologicalState = $state<HydrologicalState>({
-		saturationDepth: 0,
+		saturationDepth: (soilMoisture / 100) * soilDepth,
 		porePressure: 0,
 		porePressureRatio: 0,
 		infiltrationRate: 0
@@ -205,7 +207,8 @@
 				maxElevation,
 				slopeAngle,
 				soilDepth,
-				effectiveSaturation
+				effectiveSaturation,
+				landslideSeverity / 100 // Normalize to 0-1 range
 			);
 
 			// Calculate initial terrain deformation (progress starts at 0)
@@ -281,7 +284,7 @@
 		elapsedTime = 0;
 		rainfallAccumulated = 0;
 		hydrologicalState = {
-			saturationDepth: 0,
+			saturationDepth: (soilMoisture / 100) * soilDepth,
 			porePressure: 0,
 			porePressureRatio: 0,
 			infiltrationRate: 0
@@ -306,8 +309,10 @@
 	// Initialize physics on mount and when parameters change
 	$effect(() => {
 		// Recalculate when any geotechnical parameter changes
-		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation];
+		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation, soilMoisture];
 		if (!isRaining && !isTriggered) {
+			// Reset saturation depth when moisture changes
+			hydrologicalState.saturationDepth = (soilMoisture / 100) * soilDepth;
 			updatePhysics();
 		}
 	});

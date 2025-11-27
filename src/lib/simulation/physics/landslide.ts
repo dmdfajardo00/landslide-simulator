@@ -62,6 +62,7 @@ export function createLandslideState(): LandslideState {
  * - soilDepth: Deeper soil = larger failure mass
  * - saturation: Higher saturation = deeper failure, longer runout
  * - maxElevation: Scales the visual impact of deformation
+ * - severity: Landslide severity (0-1) scales failure zone dimensions
  */
 export function calculateFailureZone(
 	heightmap: Float32Array,
@@ -71,7 +72,8 @@ export function calculateFailureZone(
 	maxElevation: number,
 	slopeAngle: number,
 	soilDepth: number,
-	saturation: number
+	saturation: number,
+	severity: number = 0.5
 ): FailureZone {
 	// Failure zone spans most of the slope width (70-90% of terrain width)
 	const marginX = worldScale * 0.1; // 10% margin on each side
@@ -83,11 +85,15 @@ export function calculateFailureZone(
 	const headPosition = 0.70 + (slopeAngle / 60) * 0.15; // 0.70-0.85 from origin
 	const headZ = worldScale * headPosition;
 
+	// Severity scaling factor: severity 0 → 0.3x, severity 0.5 → 0.9x, severity 1 → 1.5x
+	const severityScale = 0.3 + severity * 1.2;
+
 	// Runout distance - material flows DOWNHILL (toward LOW Z values)
 	// Steeper slopes and wetter conditions = longer runout
+	// Now also scaled by severity
 	const slopeFactor = slopeAngle / 30; // 1.0 at 30°, 2.0 at 60°
 	const runoutFactor = 1.5 + slopeFactor * 1.5 + saturation * 1.5;
-	const runoutLength = worldScale * 0.35 * runoutFactor;
+	const runoutLength = worldScale * 0.35 * runoutFactor * severityScale;
 
 	// TOE is at BOTTOM of slope (LOW Z values) - material accumulates here
 	const toeZ = Math.max(headZ - runoutLength, worldScale * 0.1);
@@ -95,12 +101,13 @@ export function calculateFailureZone(
 	// Failure depth scales significantly with parameters
 	// Base depth from soil, amplified by slope steepness and saturation
 	// Scaled relative to maxElevation for visual impact
+	// Now also scaled by severity
 	const baseDepth = soilDepth * 0.8; // 80% of soil depth as base
 	const slopeAmplifier = 1 + (slopeAngle - 20) / 30; // 1.0 at 20°, 2.0 at 50°
 	const saturationAmplifier = 1 + saturation * 1.5; // 1.0 at 0%, 2.5 at 100%
 
 	// Scale depth to be visually significant (2-15% of max elevation)
-	const rawDepth = baseDepth * slopeAmplifier * saturationAmplifier;
+	const rawDepth = baseDepth * slopeAmplifier * saturationAmplifier * severityScale;
 	const minVisibleDepth = maxElevation * 0.02; // At least 2% of max elevation
 	const maxDepth = maxElevation * 0.15; // Cap at 15% of max elevation
 	const failureDepth = Math.max(minVisibleDepth, Math.min(rawDepth, maxDepth));
