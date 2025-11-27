@@ -195,7 +195,7 @@
 		if (simulationInterval) return;
 
 		simulationInterval = setInterval(() => {
-			elapsedTime += 1;
+			elapsedTime += DELTA_TIME; // Increment by physics timestep (0.1s) for real-time accuracy
 			updatePhysics();
 
 			if (isTriggered) {
@@ -422,7 +422,7 @@
 			{frictionAngle}
 			{porosity}
 			{vegetationCover}
-			{porePressure}
+			initialMoisture={porePressure}
 			{rainfallIntensity}
 			{isRaining}
 			{isTriggered}

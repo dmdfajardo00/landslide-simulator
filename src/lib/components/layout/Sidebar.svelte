@@ -128,7 +128,7 @@
 		<ParameterCard title="Hydrological Conditions" icon="fluent:drop-24-regular">
 			{#snippet children()}
 				<ParameterSlider
-					label="Pore-water Pressure (ru)"
+					label="Initial Soil Moisture"
 					bind:value={porePressure}
 					min={0}
 					max={100}
@@ -145,12 +145,12 @@
 				/>
 				<!-- Rainfall Duration Display -->
 				<div class="flex items-center justify-between py-2">
-					<span class="text-xs text-neutral-600">Rainfall Duration</span>
+					<span class="text-xs text-neutral-600">Simulation Time</span>
 					<span class="text-xs font-medium text-neutral-900">{formatDuration(elapsedTime)}</span>
 				</div>
 				<div class="flex items-center justify-between py-2 border-t border-neutral-100">
 					<span class="text-xs text-neutral-600">Accumulated Rainfall</span>
-					<span class="text-xs font-medium text-neutral-900">{rainfallAmount.toFixed(1)} mm</span>
+					<span class="text-xs font-medium text-neutral-900">{rainfallAmount.toFixed(2)} mm</span>
 				</div>
 			{/snippet}
 		</ParameterCard>

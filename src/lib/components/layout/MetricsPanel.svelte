@@ -19,7 +19,7 @@
 		frictionAngle?: number;
 		porosity?: number;
 		vegetationCover?: number;
-		porePressure?: number;
+		initialMoisture?: number;
 		rainfallIntensity?: number;
 		isRaining?: boolean;
 		isTriggered?: boolean;
@@ -38,7 +38,7 @@
 		frictionAngle = 32,
 		porosity = 0.35,
 		vegetationCover = 70,
-		porePressure = 30,
+		initialMoisture = 30,
 		rainfallIntensity = 25,
 		isRaining = false,
 		isTriggered = false
@@ -134,8 +134,9 @@
 - Porosity: ${porosity.toFixed(2)}
 
 **Hydrological Conditions:**
-- Pore-water Pressure: ${porePressure}%
+- Initial Soil Moisture: ${initialMoisture}%
 - Rainfall Intensity: ${rainfallIntensity} mm/hr
+- Current Pore Pressure Ratio (ru): ${(ru * 100).toFixed(1)}%
 
 **Vegetation:**
 - Vegetation Cover: ${vegetationCover}%
