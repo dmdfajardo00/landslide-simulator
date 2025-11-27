@@ -681,7 +681,7 @@
 					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Data Sources</h2>
 					<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
 						<p class="text-sm text-neutral-700">
-							<strong>Landslide Hazard Data:</strong> <a href="/map" class="text-blue-600 hover:text-blue-700 transition-colors">Cebu Landslide Hazards Dataset</a>
+							<strong>Landslide Hazard Data:</strong> <a href="https://hazardhunter.georisk.gov.ph/map" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 transition-colors">MGB-DENR GeoRisk Philippines</a> — Mines and Geosciences Bureau, Department of Environment and Natural Resources
 						</p>
 					</div>
 				</div>
