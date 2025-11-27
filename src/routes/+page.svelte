@@ -484,31 +484,66 @@
 	</div>
 
 	<!-- Mobile Action Buttons - Fixed at bottom on sm, relative on md+ -->
-	<div class="fixed bottom-0 left-0 right-0 md:hidden p-3 bg-white border-t border-neutral-200 z-20 flex gap-2">
-		<button
-			class="flex-1 h-12 px-3 py-2 bg-neutral-900 text-white rounded hover:bg-neutral-800 flex items-center justify-center gap-2 min-w-0 text-sm"
-			onclick={() => (showSidebarDrawer = true)}
-			title="Parameters"
-		>
-			<Icon icon="fluent:settings-24-regular" class="w-5 h-5 flex-shrink-0" />
-			<span class="hidden sm:inline truncate">Parameters</span>
-		</button>
-		<button
-			class="flex-1 h-12 px-3 py-2 bg-neutral-900 text-white rounded hover:bg-neutral-800 flex items-center justify-center gap-2 min-w-0 text-sm"
-			onclick={() => (showMetricsDrawer = true)}
-			title="Metrics"
-		>
-			<Icon icon="fluent:data-bar-vertical-24-regular" class="w-5 h-5 flex-shrink-0" />
-			<span class="hidden sm:inline truncate">Metrics</span>
-		</button>
-		<a
-			href="/map"
-			class="flex-1 h-12 px-3 py-2 bg-neutral-100 text-neutral-900 rounded hover:bg-neutral-200 border border-neutral-300 flex items-center justify-center gap-2 min-w-0 text-sm"
-			title="Hazard Map"
-		>
-			<Icon icon="fluent:map-24-regular" class="w-5 h-5 flex-shrink-0" />
-			<span class="hidden sm:inline truncate">Map</span>
-		</a>
+	<div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-neutral-200 z-20">
+		<!-- Simulation Controls Row -->
+		<div class="flex gap-2 p-2 border-b border-neutral-100">
+			<button
+				onclick={handleToggleRain}
+				class="flex-1 h-11 px-3 rounded flex items-center justify-center gap-2 text-xs font-medium transition-colors {isRaining
+					? 'bg-neutral-600 text-white'
+					: 'bg-neutral-900 text-white'}"
+				title={isRaining ? 'Stop Rain' : 'Start Rain'}
+			>
+				<Icon icon={isRaining ? "fluent:weather-rain-20-filled" : "fluent:weather-rain-20-regular"} class="w-4 h-4 flex-shrink-0" />
+				<span class="hidden xs:inline">{isRaining ? 'Stop' : 'Rain'}</span>
+			</button>
+			<button
+				onclick={handleTrigger}
+				disabled={isTriggered}
+				class="flex-1 h-11 px-3 rounded flex items-center justify-center gap-2 text-xs font-medium transition-colors {isTriggered
+					? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+					: 'bg-stone-600 text-white'}"
+				title={isTriggered ? 'Triggered' : 'Trigger Landslide'}
+			>
+				<Icon icon="fluent:warning-24-filled" class="w-4 h-4 flex-shrink-0" />
+				<span class="hidden xs:inline">{isTriggered ? 'Triggered' : 'Trigger'}</span>
+			</button>
+			<button
+				onclick={handleReset}
+				class="flex-1 h-11 px-3 rounded border border-neutral-300 bg-white text-neutral-700 flex items-center justify-center gap-2 text-xs font-medium transition-colors"
+				title="Reset Simulation"
+			>
+				<Icon icon="fluent:arrow-reset-24-regular" class="w-4 h-4 flex-shrink-0" />
+				<span class="hidden xs:inline">Reset</span>
+			</button>
+		</div>
+		<!-- Navigation Row -->
+		<div class="flex gap-2 p-2">
+			<button
+				class="flex-1 h-11 px-3 bg-neutral-900 text-white rounded flex items-center justify-center gap-2 text-xs font-medium"
+				onclick={() => (showSidebarDrawer = true)}
+				title="Parameters"
+			>
+				<Icon icon="fluent:settings-24-regular" class="w-5 h-5 flex-shrink-0" />
+				<span class="hidden sm:inline">Parameters</span>
+			</button>
+			<button
+				class="flex-1 h-11 px-3 bg-neutral-900 text-white rounded flex items-center justify-center gap-2 text-xs font-medium"
+				onclick={() => (showMetricsDrawer = true)}
+				title="Metrics"
+			>
+				<Icon icon="fluent:data-bar-vertical-24-regular" class="w-5 h-5 flex-shrink-0" />
+				<span class="hidden sm:inline">Metrics</span>
+			</button>
+			<a
+				href="/map"
+				class="flex-1 h-11 px-3 bg-neutral-100 text-neutral-900 rounded border border-neutral-300 flex items-center justify-center gap-2 text-xs font-medium"
+				title="Hazard Map"
+			>
+				<Icon icon="fluent:map-24-regular" class="w-5 h-5 flex-shrink-0" />
+				<span class="hidden sm:inline">Map</span>
+			</a>
+		</div>
 	</div>
 
 	<!-- Desktop Action Buttons - Show on md+ below sidebar -->
