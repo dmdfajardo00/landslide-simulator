@@ -50,7 +50,7 @@
 	}: Props = $props();
 </script>
 
-<aside class="w-80 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col">
+<aside class="w-80 h-full min-h-0 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col">
 	<!-- Sidebar Header -->
 	<div class="p-4 border-b border-neutral-200">
 		<h1 class="text-lg font-semibold text-neutral-900">Landslide Simulator</h1>
@@ -58,7 +58,7 @@
 	</div>
 
 	<!-- Sidebar Content -->
-	<div class="flex-1 p-4 space-y-3 pb-20">
+	<div class="flex-1 p-4 space-y-3 pb-40">
 		<!-- Environmental Factors -->
 		<ParameterCard title="Environmental Factors" icon="fluent:plant-grass-20-regular">
 			{#snippet children()}
