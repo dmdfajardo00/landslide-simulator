@@ -426,7 +426,25 @@
 		/>
 
 		<!-- Right Metrics Panel -->
-		<MetricsPanel {fos} {pof} {ru} {cohesion} {displacedParticles} />
+		<MetricsPanel
+			{fos}
+			{pof}
+			{ru}
+			{cohesion}
+			{displacedParticles}
+			{slopeAngle}
+			{soilDepth}
+			{unitWeight}
+			{frictionAngle}
+			{hydraulicConductivity}
+			{vegetationCover}
+			{erosion}
+			{soilMoisture}
+			{rainfallIntensity}
+			{coefficientOfVariation}
+			{isRaining}
+			{isTriggered}
+		/>
 	</div>
 
 	<!-- Fixed Bottom Left Action Buttons -->

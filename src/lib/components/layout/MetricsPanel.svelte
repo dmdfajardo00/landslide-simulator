@@ -1,12 +1,30 @@
 <script lang="ts">
 	import { getFosStatus, getPofStatus, getRuStatus, getCohesionStatus, calculateOverallStatus } from '$lib/components/metrics';
 
+	interface ChatMessage {
+		role: 'user' | 'assistant';
+		content: string;
+	}
+
 	interface Props {
 		fos?: number;
 		pof?: number;
 		ru?: number;
 		cohesion?: number;
 		displacedParticles?: number;
+		// Simulation parameters for AI context
+		slopeAngle?: number;
+		soilDepth?: number;
+		unitWeight?: number;
+		frictionAngle?: number;
+		hydraulicConductivity?: number;
+		vegetationCover?: number;
+		erosion?: number;
+		soilMoisture?: number;
+		rainfallIntensity?: number;
+		coefficientOfVariation?: number;
+		isRaining?: boolean;
+		isTriggered?: boolean;
 	}
 
 	let {
@@ -14,7 +32,20 @@
 		pof = 1.68,
 		ru = 0.316,
 		cohesion = 14.7,
-		displacedParticles = 0
+		displacedParticles = 0,
+		// Simulation parameters
+		slopeAngle = 30,
+		soilDepth = 3.0,
+		unitWeight = 19.0,
+		frictionAngle = 32,
+		hydraulicConductivity = 5.0,
+		vegetationCover = 70,
+		erosion = 20,
+		soilMoisture = 30,
+		rainfallIntensity = 25,
+		coefficientOfVariation = 0.15,
+		isRaining = false,
+		isTriggered = false
 	}: Props = $props();
 
 	// Track history for charts - throttled updates
@@ -86,77 +117,137 @@
 	let showAI = $state(false);
 	let aiLoading = $state(false);
 	let aiQuestion = $state('');
-	let aiStreamedText = $state('');
-	let aiStreamInterval: ReturnType<typeof setInterval> | null = null;
-	let aiLoadingTimeout: ReturnType<typeof setTimeout> | null = null;
+	let chatMessages = $state<ChatMessage[]>([]);
+	let currentStreamingText = $state('');
+	let abortController: AbortController | null = null;
+	let chatContainer: HTMLDivElement;
 
-	const aiDemoText = `**Understanding Slope Stability Analysis**
+	// Build context string from current simulation parameters
+	function buildContext(): string {
+		const stabilityStatus = fos >= 1.5 ? 'STABLE' : fos >= 1.0 ? 'MARGINAL' : 'UNSTABLE';
+		const simulationStatus = isTriggered ? 'LANDSLIDE ACTIVE' : isRaining ? 'RAINFALL SIMULATION' : 'IDLE';
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. **Factor of Safety (FoS)** is a critical metric that represents the ratio of resisting forces to driving forces on a slope. When FoS drops below 1.0, the slope is considered unstable and prone to failure.
+		return `- Slope Angle: ${slopeAngle}°
+- Soil Depth: ${soilDepth.toFixed(1)} m
+- Unit Weight: ${unitWeight.toFixed(1)} kN/m³
+- Friction Angle: ${frictionAngle}°
+- Cohesion: ${cohesion.toFixed(1)} kPa
+- Hydraulic Conductivity: ${hydraulicConductivity.toFixed(1)} ×10⁻⁶ m/s
+- Vegetation Cover: ${vegetationCover}%
+- Erosion Level: ${erosion}%
+- Soil Moisture: ${soilMoisture}%
+- Rainfall Intensity: ${rainfallIntensity} mm/hr
 
-**Pore Water Pressure Effects**
+**Calculated Metrics:**
+- Factor of Safety (FoS): ${fos.toFixed(3)} → ${stabilityStatus}
+- Probability of Failure: ${pof.toFixed(2)}%
+- Pore Pressure Ratio (ru): ${ru.toFixed(3)}
+- Displaced Volume: ${displacedParticles} m³
 
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. The **pore pressure ratio (ru)** significantly affects slope stability by reducing the effective stress between soil particles. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Higher rainfall intensity leads to increased infiltration and elevated pore pressures.
+**Simulation Status:** ${simulationStatus}
+**Coefficient of Variation:** ${coefficientOfVariation.toFixed(2)}`;
+	}
 
-**Geotechnical Parameters**
+	async function sendMessage() {
+		const question = aiQuestion.trim();
+		if (!question || aiLoading) return;
 
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. **Cohesion** and **friction angle** are the two primary strength parameters in the Mohr-Coulomb failure criterion. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-
-**Mitigation Strategies**
-
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium. **Vegetation cover** plays a crucial role in slope stabilization through root reinforcement and rainfall interception. Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Proper drainage systems and retaining structures can significantly improve slope stability.`;
-
-	function startAIStream() {
-		// Clear any existing timers to prevent accumulation
-		if (aiLoadingTimeout) {
-			clearTimeout(aiLoadingTimeout);
-			aiLoadingTimeout = null;
-		}
-		if (aiStreamInterval) {
-			clearInterval(aiStreamInterval);
-			aiStreamInterval = null;
-		}
-
+		// Add user message
+		chatMessages = [...chatMessages, { role: 'user', content: question }];
+		aiQuestion = '';
 		aiLoading = true;
-		aiStreamedText = '';
+		currentStreamingText = '';
 
-		// Simulate loading delay
-		aiLoadingTimeout = setTimeout(() => {
-			aiLoading = false;
-			aiLoadingTimeout = null;
-			let charIndex = 0;
+		// Scroll to bottom
+		setTimeout(() => {
+			if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+		}, 10);
 
-			// Stream text character by character
-			aiStreamInterval = setInterval(() => {
-				if (charIndex < aiDemoText.length) {
-					// Add multiple characters per tick for faster streaming
-					const charsToAdd = Math.min(3, aiDemoText.length - charIndex);
-					aiStreamedText += aiDemoText.slice(charIndex, charIndex + charsToAdd);
-					charIndex += charsToAdd;
-				} else {
-					if (aiStreamInterval) {
-						clearInterval(aiStreamInterval);
-						aiStreamInterval = null;
+		// Abort any previous request
+		if (abortController) abortController.abort();
+		abortController = new AbortController();
+
+		try {
+			const response = await fetch('/api/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					messages: chatMessages.map((m) => ({ role: m.role, content: m.content })),
+					context: buildContext()
+				}),
+				signal: abortController.signal
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to get response');
+			}
+
+			const reader = response.body?.getReader();
+			if (!reader) throw new Error('No response body');
+
+			const decoder = new TextDecoder();
+			let buffer = '';
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop() || '';
+
+				for (const line of lines) {
+					if (line.startsWith('data: ')) {
+						const data = line.slice(6);
+						if (data === '[DONE]') continue;
+
+						try {
+							const parsed = JSON.parse(data);
+							const content = parsed.choices?.[0]?.delta?.content;
+							if (content) {
+								currentStreamingText += content;
+								// Auto-scroll during streaming
+								if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+							}
+						} catch {
+							// Skip non-JSON lines (SSE comments)
+						}
 					}
 				}
-			}, 10);
-		}, 1500);
+			}
+
+			// Add completed assistant message
+			if (currentStreamingText) {
+				chatMessages = [...chatMessages, { role: 'assistant', content: currentStreamingText }];
+			}
+		} catch (err) {
+			if ((err as Error).name !== 'AbortError') {
+				chatMessages = [
+					...chatMessages,
+					{ role: 'assistant', content: '**Connection error.** Check your network and try again.' }
+				];
+			}
+		} finally {
+			aiLoading = false;
+			currentStreamingText = '';
+			abortController = null;
+		}
+	}
+
+	function clearConversation() {
+		chatMessages = [];
+		currentStreamingText = '';
+		aiQuestion = '';
 	}
 
 	function closeAIModal() {
 		showAI = false;
-		// Clear both timeout and interval to prevent leaks
-		if (aiLoadingTimeout) {
-			clearTimeout(aiLoadingTimeout);
-			aiLoadingTimeout = null;
-		}
-		if (aiStreamInterval) {
-			clearInterval(aiStreamInterval);
-			aiStreamInterval = null;
+		if (abortController) {
+			abortController.abort();
+			abortController = null;
 		}
 		aiLoading = false;
-		aiStreamedText = '';
-		aiQuestion = '';
+		currentStreamingText = '';
 	}
 
 	// Simple markdown bold parser
@@ -330,10 +421,7 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
 	<!-- Ask AI & About Buttons -->
 	<div class="px-3 py-2 border-t border-neutral-100 bg-neutral-50 flex gap-2">
 		<button
-			onclick={() => {
-				showAI = true;
-				startAIStream();
-			}}
+			onclick={() => (showAI = true)}
 			class="flex-1 px-2 py-1.5 text-[10px] font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded transition-colors flex items-center justify-center gap-1.5"
 		>
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -802,9 +890,9 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
 {#if showAI}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={closeAIModal}></div>
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={closeAIModal}>
-		<div class="bg-white rounded-lg shadow-xl w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+		<div class="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[80vh]" onclick={(e) => e.stopPropagation()}>
 			<!-- Header -->
-			<div class="px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+			<div class="px-4 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0">
 				<div class="flex items-center gap-2">
 					<div class="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center">
 						<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -812,66 +900,158 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
 						</svg>
 					</div>
 					<div>
-						<h3 class="text-sm font-semibold text-neutral-900">AI Assistant</h3>
-						<p class="text-xs text-neutral-500">Ask about slope stability</p>
+						<h3 class="text-sm font-semibold text-neutral-900">Dr. Terra</h3>
+						<p class="text-xs text-neutral-500">Engineering Geologist</p>
 					</div>
 				</div>
-				<button
-					onclick={closeAIModal}
-					class="text-neutral-400 hover:text-neutral-600 transition-colors"
-				>
-					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
+				<div class="flex items-center gap-2">
+					{#if chatMessages.length > 0}
+						<button
+							onclick={clearConversation}
+							class="text-xs text-neutral-500 hover:text-neutral-700 transition-colors"
+							title="Clear conversation"
+						>
+							Clear
+						</button>
+					{/if}
+					<button
+						onclick={closeAIModal}
+						class="text-neutral-400 hover:text-neutral-600 transition-colors"
+					>
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
 			</div>
 
-			<!-- Content -->
-			<div class="h-64 overflow-y-auto p-4">
-				{#if aiLoading}
-					<!-- Shimmer Loading Skeleton -->
-					<div class="space-y-3 animate-pulse">
-						<div class="h-4 bg-neutral-200 rounded w-3/4"></div>
-						<div class="h-4 bg-neutral-200 rounded w-full"></div>
-						<div class="h-4 bg-neutral-200 rounded w-5/6"></div>
-						<div class="h-4 bg-neutral-200 rounded w-2/3"></div>
-						<div class="h-4 bg-neutral-200 rounded w-full"></div>
-						<div class="h-4 bg-neutral-200 rounded w-4/5"></div>
-						<div class="h-4 bg-neutral-200 rounded w-3/4"></div>
-						<div class="h-4 bg-neutral-200 rounded w-full"></div>
-					</div>
-				{:else if aiStreamedText}
-					<!-- Streamed Response with Markdown -->
-					<div class="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
-						{@html parseMarkdownBold(aiStreamedText)}
-						<span class="inline-block w-1.5 h-4 bg-neutral-900 animate-pulse ml-0.5 align-middle"></span>
+			<!-- Chat Content -->
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px]">
+				{#if chatMessages.length === 0 && !currentStreamingText && !aiLoading}
+					<div class="flex flex-col items-center py-4">
+						<div class="w-10 h-10 mb-2 rounded-full bg-neutral-100 flex items-center justify-center">
+							<svg class="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+							</svg>
+						</div>
+						<p class="text-sm text-neutral-600 font-medium">Ask me anything about slope stability</p>
+						<p class="text-xs text-neutral-400 mt-1 mb-4">I can see your current simulation parameters</p>
+
+						<!-- Starter Prompts Grid -->
+						<div class="grid grid-cols-2 gap-2 w-full">
+							<button
+								onclick={() => { aiQuestion = 'Is this slope stable?'; sendMessage(); }}
+								class="p-3 text-left bg-white border border-neutral-200 rounded-lg hover:border-neutral-300 hover:bg-neutral-50 transition-colors group"
+							>
+								<div class="flex items-start gap-2">
+									<svg class="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+									<span class="text-xs text-neutral-600 group-hover:text-neutral-900">Is this slope stable?</span>
+								</div>
+							</button>
+							<button
+								onclick={() => { aiQuestion = 'What does my Factor of Safety mean?'; sendMessage(); }}
+								class="p-3 text-left bg-white border border-neutral-200 rounded-lg hover:border-neutral-300 hover:bg-neutral-50 transition-colors group"
+							>
+								<div class="flex items-start gap-2">
+									<svg class="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+									<span class="text-xs text-neutral-600 group-hover:text-neutral-900">What does my Factor of Safety mean?</span>
+								</div>
+							</button>
+							<button
+								onclick={() => { aiQuestion = 'How does rainfall trigger landslides?'; sendMessage(); }}
+								class="p-3 text-left bg-white border border-neutral-200 rounded-lg hover:border-neutral-300 hover:bg-neutral-50 transition-colors group"
+							>
+								<div class="flex items-start gap-2">
+									<svg class="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+									</svg>
+									<span class="text-xs text-neutral-600 group-hover:text-neutral-900">How does rainfall trigger landslides?</span>
+								</div>
+							</button>
+							<button
+								onclick={() => { aiQuestion = 'What should I adjust to improve stability?'; sendMessage(); }}
+								class="p-3 text-left bg-white border border-neutral-200 rounded-lg hover:border-neutral-300 hover:bg-neutral-50 transition-colors group"
+							>
+								<div class="flex items-start gap-2">
+									<svg class="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+									</svg>
+									<span class="text-xs text-neutral-600 group-hover:text-neutral-900">What should I adjust to improve stability?</span>
+								</div>
+							</button>
+						</div>
 					</div>
 				{:else}
-					<p class="text-sm text-neutral-500 text-center py-8">Ask a question to get started...</p>
+					{#each chatMessages as message}
+						<div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
+							<div class="max-w-[85%] {message.role === 'user' ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700'} rounded-lg px-3 py-2">
+								<div class="text-sm leading-relaxed whitespace-pre-wrap">
+									{#if message.role === 'assistant'}
+										{@html parseMarkdownBold(message.content)}
+									{:else}
+										{message.content}
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/each}
+
+					<!-- Streaming message -->
+					{#if currentStreamingText}
+						<div class="flex justify-start">
+							<div class="max-w-[85%] bg-neutral-100 text-neutral-700 rounded-lg px-3 py-2">
+								<div class="text-sm leading-relaxed whitespace-pre-wrap">
+									{@html parseMarkdownBold(currentStreamingText)}
+									<span class="inline-block w-1.5 h-4 bg-neutral-600 animate-pulse ml-0.5 align-middle"></span>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					<!-- Loading indicator -->
+					{#if aiLoading && !currentStreamingText}
+						<div class="flex justify-start">
+							<div class="bg-neutral-100 rounded-lg px-3 py-2">
+								<div class="flex gap-1">
+									<span class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+									<span class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+									<span class="w-2 h-2 bg-neutral-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+								</div>
+							</div>
+						</div>
+					{/if}
 				{/if}
 			</div>
 
 			<!-- Input -->
-			<div class="px-4 py-3 border-t border-neutral-200 bg-neutral-50 rounded-b-lg">
+			<div class="px-4 py-3 border-t border-neutral-200 bg-neutral-50 rounded-b-lg shrink-0">
 				<div class="flex gap-2">
 					<input
 						type="text"
 						bind:value={aiQuestion}
-						placeholder="Ask about landslide mechanics..."
-						class="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+						placeholder="Ask about the slope..."
+						disabled={aiLoading}
+						class="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent disabled:opacity-50"
 						onkeydown={(e) => {
-							if (e.key === 'Enter' && aiQuestion.trim()) {
-								startAIStream();
+							if (e.key === 'Enter' && !e.shiftKey && aiQuestion.trim()) {
+								e.preventDefault();
+								sendMessage();
 							}
 						}}
 					/>
 					<button
-						onclick={() => {
-							if (aiQuestion.trim()) startAIStream();
-						}}
-						class="px-4 py-2 text-sm font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded transition-colors"
+						onclick={sendMessage}
+						disabled={aiLoading || !aiQuestion.trim()}
+						class="p-2 text-white bg-neutral-900 hover:bg-neutral-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						title="Send message"
 					>
-						Send
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+						</svg>
 					</button>
 				</div>
 			</div>
