@@ -18,31 +18,34 @@
 	import { TerrainGenerator } from '$lib/simulation/terrain';
 	import type { HydrologicalState, LandslideState } from '$lib/simulation/physics';
 
+	// Page data from URL params (passed from map)
+	let { data } = $props();
+
 	// Simulation state
 	let isRaining = $state(false);
 	let isTriggered = $state(false);
 	let elapsedTime = $state(0);
 	let rainfallAccumulated = $state(0);
 
-	// Terrain parameters (bound from Sidebar)
-	let slopeAngle = $state(30);
-	let maxElevation = $state(50);
-	let rainfallIntensity = $state(25);
-	let vegetationCover = $state(70);
-	let soilDepth = $state(3.0);
+	// Terrain parameters (bound from Sidebar, initialized from URL params if present)
+	let slopeAngle = $state(data.slopeAngle);
+	let maxElevation = $state(data.maxElevation);
+	let rainfallIntensity = $state(data.rainfallIntensity);
+	let vegetationCover = $state(data.vegetationCover);
+	let soilDepth = $state(data.soilDepth);
 
 	// Environmental parameters
-	let erosion = $state(20);
-	let soilMoisture = $state(30);
+	let erosion = $state(data.erosion);
+	let soilMoisture = $state(data.soilMoisture);
 
 	// Geotechnical parameters
-	let unitWeight = $state(19.0);
-	let cohesionInput = $state(15);
-	let frictionAngle = $state(32);
-	let hydraulicConductivity = $state(5.0);
+	let unitWeight = $state(data.unitWeight);
+	let cohesionInput = $state(data.cohesion);
+	let frictionAngle = $state(data.frictionAngle);
+	let hydraulicConductivity = $state(data.hydraulicConductivity);
 
 	// Reliability parameter
-	let coefficientOfVariation = $state(0.15);
+	let coefficientOfVariation = $state(data.coefficientOfVariation);
 
 	// Landslide visualization parameters
 	let landslideSeverity = $state(50);
