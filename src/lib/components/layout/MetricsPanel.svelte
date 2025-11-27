@@ -565,15 +565,22 @@
 				{#if activeTab === 'student'}
 					<div class="prose prose-sm max-w-none">
 						<h2 class="text-lg font-bold text-neutral-900 mb-4">Student Guide</h2>
-						<div class="space-y-4 text-neutral-700">
-							<p>Welcome to the <strong>3D Dynamic Landslide Generator</strong> - an interactive physics simulation tool designed for geotechnical engineering education.</p>
+						<div class="space-y-4 text-neutral-700 text-sm">
+							<p>Welcome to the <strong>3D Dynamic Landslide Generator</strong> — an interactive physics simulation tool for geotechnical-engineering learning.</p>
+
 							<h3 class="font-semibold text-neutral-900 mt-4">Getting Started</h3>
-							<ul class="list-disc list-inside space-y-2 text-sm">
-								<li>Adjust slope angle and soil properties using the left panel controls</li>
-								<li>Use the action buttons to toggle rain simulation and trigger landslides</li>
-								<li>Monitor the metrics panel on the right to track Factor of Safety, Probability of Failure, and other key indicators</li>
-								<li>Observe real-time 3D terrain deformation and particle physics</li>
+							<ul class="list-disc list-inside space-y-2">
+								<li>Use the left panel to adjust slope angle and soil parameters.</li>
+								<li>Use the action buttons to toggle rain simulation and trigger landslides.</li>
+								<li>Use the right panel to monitor metrics like Factor of Safety (FoS), Probability of Failure, and other key indicators.</li>
+								<li>Watch 3D, real-time terrain deformation and particle motion as you change parameters.</li>
 							</ul>
+
+							<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+								<p class="text-sm text-blue-900">
+									<strong>💡 Tip:</strong> For detailed parameter explanations, see the <strong>Key Concepts</strong> tab. For formulas, see <strong>Formulas & Theory</strong>. For technical details, see <strong>Simulation Info</strong>.
+								</p>
+							</div>
 						</div>
 					</div>
 				{:else if activeTab === 'formulas'}
@@ -608,6 +615,58 @@
 						<div class="space-y-4 text-neutral-700 text-sm">
 							<h3 class="font-semibold text-neutral-900">Rendering & Physics</h3>
 							<p>This simulator uses <strong>Three.js via Threlte</strong> for 3D visualization with custom physics calculations for debris particles and procedural terrain deformation.</p>
+
+							<h3 class="font-semibold text-neutral-900 mt-4">Time Acceleration</h3>
+							<p>Real landslides may develop over hours or days due to prolonged rainfall. The simulator accelerates time by a factor of 300, allowing observation of slope responses in minutes. (1 second in simulation corresponds to approximately 5 minutes of real time.)</p>
+
+							<h3 class="font-semibold text-neutral-900 mt-4">Parameter Ranges</h3>
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+								<div class="bg-neutral-50 p-3 rounded border border-neutral-200">
+									<h4 class="font-semibold text-neutral-800 mb-2">Slope Geometry</h4>
+									<ul class="space-y-1">
+										<li>Slope Angle (θ): 15–75°</li>
+										<li>Soil Height (H): 1–10 m</li>
+									</ul>
+								</div>
+								<div class="bg-neutral-50 p-3 rounded border border-neutral-200">
+									<h4 class="font-semibold text-neutral-800 mb-2">Soil Properties</h4>
+									<ul class="space-y-1">
+										<li>Cohesion (c): 0–50 kPa</li>
+										<li>Friction Angle (φ): 15–45°</li>
+										<li>Unit Weight (γ): 16–22 kN/m³</li>
+									</ul>
+								</div>
+								<div class="bg-neutral-50 p-3 rounded border border-neutral-200">
+									<h4 class="font-semibold text-neutral-800 mb-2">Hydrological</h4>
+									<ul class="space-y-1">
+										<li>Rainfall Intensity (I): 0–100 mm/hr</li>
+										<li>Pore Pressure (Pw): 0–100 kPa</li>
+									</ul>
+								</div>
+								<div class="bg-neutral-50 p-3 rounded border border-neutral-200">
+									<h4 class="font-semibold text-neutral-800 mb-2">Vegetation</h4>
+									<ul class="space-y-1">
+										<li>Coverage: 0–100%</li>
+									</ul>
+								</div>
+							</div>
+
+							<h3 class="font-semibold text-neutral-900 mt-4">Stability Thresholds</h3>
+							<div class="space-y-2 text-xs bg-neutral-50 p-3 rounded border border-neutral-200">
+								<div class="flex items-start gap-2">
+									<span class="font-semibold min-w-[90px]">FoS ≥ 1.5:</span>
+									<span class="text-neutral-600">Stable</span>
+								</div>
+								<div class="flex items-start gap-2">
+									<span class="font-semibold min-w-[90px]">FoS 1.0–1.5:</span>
+									<span class="text-neutral-600">Marginal</span>
+								</div>
+								<div class="flex items-start gap-2">
+									<span class="font-semibold min-w-[90px]">FoS &lt; 1.0:</span>
+									<span class="text-neutral-600">Unstable</span>
+								</div>
+							</div>
+
 							<h3 class="font-semibold text-neutral-900 mt-4">Real-time Calculations</h3>
 							<ul class="list-disc list-inside space-y-2">
 								<li>Factor of Safety updates every simulation step</li>
@@ -615,6 +674,7 @@
 								<li>Particle displacement tracked when FoS drops below critical threshold</li>
 								<li>Vegetation provides dynamic cohesion contribution</li>
 							</ul>
+
 							<h3 class="font-semibold text-neutral-900 mt-4">Visualization Features</h3>
 							<ul class="list-disc list-inside space-y-2">
 								<li>3D terrain with adjustable slope geometry</li>
@@ -627,44 +687,63 @@
 					</div>
 				{:else if activeTab === 'parameters'}
 					<div class="prose prose-sm max-w-none">
-						<h2 class="text-lg font-bold text-neutral-900 mb-4">Key Concepts</h2>
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Key Concepts & Parameters</h2>
 						<div class="space-y-4 text-neutral-700 text-sm">
+
+							<h3 class="font-semibold text-neutral-900 mt-4">Slope Geometry</h3>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Factor of Safety (FoS):</strong> Ratio of resisting forces to driving forces using Infinite Slope analysis. FoS ≥ 1.5 indicates stability; FoS &lt; 1.0 indicates failure</li>
-								<li><strong>Pore Pressure Ratio (rᵤ):</strong> Ratio of pore water pressure to total stress; reduces effective stress and shear strength</li>
-								<li><strong>Slope Angle:</strong> Steeper slopes increase driving forces and are more susceptible to failure</li>
-								<li><strong>Vegetation:</strong> Root systems increase soil cohesion; canopy intercepts rainfall</li>
-								<li><strong>Effective Cohesion (c'):</strong> Soil cohesion accounting for vegetation roots and saturation effects; minimum 15% of base cohesion</li>
+								<li><strong>Slope Angle (θ)</strong> — from 15° to 75°. Steeper slopes increase the gravitational component along the slope, making landslides more likely.</li>
+								<li><strong>Soil Height (H)</strong> — from 1 to 10 m, representing the thickness of the soil layer that could fail.</li>
 							</ul>
 
-							<h3 class="font-semibold text-neutral-900 mt-6">Geotechnical Parameters</h3>
-
-							<h4 class="font-medium text-neutral-800 mt-4">Slope Geometry</h4>
+							<h3 class="font-semibold text-neutral-900 mt-4">Soil Properties</h3>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Slope Angle (β):</strong> 0-90° - Controls gravitational component along slope</li>
-								<li><strong>Slope Height (z):</strong> 0.8-5 m - Vertical height of potentially failing soil layer</li>
+								<li><strong>Cohesion (c)</strong> — from 0 to 50 kPa. This is the internal "glue" between soil particles, giving soil strength independent of normal stress.</li>
+								<li><strong>Internal Friction Angle (φ)</strong> — from 15° to 45°. This reflects the frictional resistance between soil particles under normal stress; higher φ means more resistance to sliding.</li>
+								<li><strong>Unit Weight (γ)</strong> — from 16 to 22 kN/m³. This is the weight of soil per unit volume; heavier soil increases gravitational driving force on the slope.</li>
+								<li><strong>Porosity (n)</strong> — user-defined. Porosity influences how much water the soil can hold, which affects stability through water content and pore pressures.</li>
 							</ul>
 
-							<h4 class="font-medium text-neutral-800 mt-4">Soil Properties</h4>
+							<h3 class="font-semibold text-neutral-900 mt-4">Hydrological Factors</h3>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Cohesion (c'):</strong> 0-50 kPa - Effective cohesion; internal soil strength</li>
-								<li><strong>Friction Angle (φ'):</strong> 15-45° - Effective angle of internal friction</li>
-								<li><strong>Unit Weight (γ):</strong> 10-25 kN/m³ - Weight per unit volume of soil</li>
-								<li><strong>Porosity (n):</strong> 0.1-0.6 - Fraction of soil volume that is void space</li>
+								<li><strong>Rainfall Intensity (I)</strong> — 0 to 100 mm/hr. Heavy rain increases water infiltration, increases weight, and can raise pore-water pressure, all of which destabilize slope.</li>
+								<li><strong>Pore Water Pressure (Pw)</strong> — 0 to 100 kPa. High pore-water pressure reduces effective stress in soil, decreasing shear strength and making landslide more likely.</li>
 							</ul>
 
-							<h4 class="font-medium text-neutral-800 mt-4">Hydrological Factors</h4>
+							<h3 class="font-semibold text-neutral-900 mt-4">Vegetation</h3>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Pore-water Pressure (u):</strong> 0-100 kPa - Water pressure in soil pores reducing effective stress</li>
-								<li><strong>Rainfall Intensity (I):</strong> 0-100 mm/hr - Rate of water input to slope</li>
+								<li><strong>Vegetation Coverage (%)</strong> — 0 to 100%. Root systems help bind soil, add cohesion, reduce erosion, and may help manage water content, all contributing to slope stability.</li>
 							</ul>
 
-							<h4 class="font-medium text-neutral-800 mt-4">Vegetation</h4>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Vegetation Cover (%):</strong> 0-100% - Density of plant cover on slope</li>
-								<li><strong>Root Strength:</strong> Contributes up to 12 kPa additional cohesion at 100% coverage</li>
-								<li><strong>Interception:</strong> Vegetation intercepts up to 30% of rainfall</li>
-							</ul>
+							<h3 class="font-semibold text-neutral-900 mt-6">Stability & Failure Indicators</h3>
+							<div class="space-y-3 mt-3">
+								<div>
+									<p><strong>Factor of Safety (FoS)</strong> – Represents the ratio of soil's resisting strength to the driving forces along the slope.</p>
+									<ul class="list-disc list-inside ml-4 mt-1 text-xs text-neutral-600">
+										<li>FoS ≥ 1.5 – Slope is stable.</li>
+										<li>FoS 1.0–1.5 – Slope stability is marginal; caution advised.</li>
+										<li>FoS &lt; 1.0 – Slope is unstable; landslide likely.</li>
+									</ul>
+								</div>
+
+								<div>
+									<p><strong>Probability of Failure (PoF)</strong> – The estimated likelihood (in percent) that a landslide will occur, accounting for variability in soil properties and environmental conditions.</p>
+									<ul class="list-disc list-inside ml-4 mt-1 text-xs text-neutral-600">
+										<li>PoF &lt; 5% – Very low risk.</li>
+										<li>PoF 20–50% – Moderate to high risk.</li>
+										<li>PoF &gt; 50% – Extremely high risk; failure imminent.</li>
+									</ul>
+								</div>
+
+								<div>
+									<p><strong>Pore Pressure Ratio (rᵤ)</strong> – Indicates the ratio of water pressure within soil pores relative to the total stress. Higher values reduce soil strength and slope stability.</p>
+									<ul class="list-disc list-inside ml-4 mt-1 text-xs text-neutral-600">
+										<li>rᵤ 0–0.3 – Soil is relatively dry and stable.</li>
+										<li>rᵤ 0.5–0.7 – Soil is becoming saturated, reducing stability.</li>
+										<li>rᵤ &gt; 0.8 – Soil is highly saturated; failure risk is significant.</li>
+									</ul>
+								</div>
+							</div>
 						</div>
 					</div>
 				{/if}
