@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import ViewportPlaceholder from '$lib/components/layout/ViewportPlaceholder.svelte';
 	import MetricsPanel from '$lib/components/layout/MetricsPanel.svelte';
@@ -357,11 +357,14 @@
 	$effect(() => {
 		// Recalculate when any geotechnical or environmental parameter changes
 		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation, soilMoisture, vegetationCover, erosion, hydraulicConductivity];
-		if (!isRaining && !isTriggered) {
-			// Reset saturation depth when moisture changes
-			hydrologicalState.saturationDepth = (soilMoisture / 100) * soilDepth;
-			updatePhysics();
-		}
+		// Use untrack to prevent state modifications from re-triggering this effect
+		untrack(() => {
+			if (!isRaining && !isTriggered) {
+				// Reset saturation depth when moisture changes
+				hydrologicalState.saturationDepth = (soilMoisture / 100) * soilDepth;
+				updatePhysics();
+			}
+		});
 	});
 
 	// Start/stop simulation based on rain state
