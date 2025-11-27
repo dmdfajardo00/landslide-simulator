@@ -151,14 +151,15 @@
 	// Calculate slope at a heightmap position
 	function calculateSlope(x: number, z: number): number {
 		const idx = z * width + x;
-		const h = heightmap[idx] * maxElevation;
+		const heightScale = soilDepth / 3.0;
+		const h = heightmap[idx] * maxElevation * heightScale;
 		const cellSize = worldScale / (width - 1);
 
 		// Get neighboring heights with boundary clamping
-		const hL = (x > 0 ? heightmap[idx - 1] : heightmap[idx]) * maxElevation;
-		const hR = (x < width - 1 ? heightmap[idx + 1] : heightmap[idx]) * maxElevation;
-		const hD = (z > 0 ? heightmap[idx - width] : heightmap[idx]) * maxElevation;
-		const hU = (z < height - 1 ? heightmap[idx + width] : heightmap[idx]) * maxElevation;
+		const hL = (x > 0 ? heightmap[idx - 1] : heightmap[idx]) * maxElevation * heightScale;
+		const hR = (x < width - 1 ? heightmap[idx + 1] : heightmap[idx]) * maxElevation * heightScale;
+		const hD = (z > 0 ? heightmap[idx - width] : heightmap[idx]) * maxElevation * heightScale;
+		const hU = (z < height - 1 ? heightmap[idx + width] : heightmap[idx]) * maxElevation * heightScale;
 
 		// Calculate gradient
 		const dhdx = (hR - hL) / (2 * cellSize);
@@ -204,10 +205,13 @@
 		const colors = colorAttribute.array as Float32Array;
 		const vertexCount = width * height;
 
+		// Scale terrain height based on soilDepth (reference: 3.0m = normal height)
+		const heightScale = soilDepth / 3.0;
+
 		// PlaneGeometry after rotateX(-PI/2): X stays X, Y becomes -Z, Z becomes Y
 		// So we update Y coordinate (which is elevation after rotation)
 		for (let i = 0; i < vertexCount; i++) {
-			let heightValue = heightmap[i] * maxElevation;
+			let heightValue = heightmap[i] * maxElevation * heightScale;
 
 			// Apply landslide deformation
 			if (scarpDepth && scarpDepth[i] > 0) {
@@ -222,15 +226,15 @@
 
 		geometry.attributes.position.needsUpdate = true;
 
-		// Calculate soil layer threshold based on soilDepth
-		const soilLayerThreshold = maxElevation * (soilDepth / 10);
+		// Calculate soil layer threshold based on soilDepth and height scale
+		const soilLayerThreshold = maxElevation * heightScale * 0.3; // 30% of terrain height is soil
 
 		// Update vertex colors in-place (using pre-allocated temp colors)
 		for (let z = 0; z < height; z++) {
 			for (let x = 0; x < width; x++) {
 				const idx = z * width + x;
 				const slope = calculateSlope(x, z);
-				const heightValue = heightmap[idx] * maxElevation;
+				const heightValue = heightmap[idx] * maxElevation * heightScale;
 
 				// Get base color from slope into tempColorResult
 				getColorForSlopeInto(tempColorResult, slope);
