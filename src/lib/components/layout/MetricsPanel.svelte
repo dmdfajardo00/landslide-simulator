@@ -545,9 +545,9 @@
 			<nav class="flex gap-1 p-2 border-b border-neutral-200 bg-neutral-50 overflow-x-auto">
 				{#each [
 					{ id: 'student', label: 'Student Guide' },
-					{ id: 'formulas', label: 'Formulas & Theory' },
-					{ id: 'info', label: 'Simulation Info' },
-					{ id: 'parameters', label: 'Key Concepts' }
+					{ id: 'parameters', label: 'Key Concepts' },
+					{ id: 'formulas', label: 'Formulas' },
+					{ id: 'info', label: 'Simulation Information' }
 				] as tab}
 					<button
 						onclick={() => (activeTab = tab.id)}
@@ -687,61 +687,71 @@
 					</div>
 				{:else if activeTab === 'parameters'}
 					<div class="prose prose-sm max-w-none">
-						<h2 class="text-lg font-bold text-neutral-900 mb-4">Key Concepts & Parameters</h2>
-						<div class="space-y-4 text-neutral-700 text-sm">
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Key Concepts</h2>
+						<div class="space-y-5 text-neutral-700 text-sm">
 
-							<h3 class="font-semibold text-neutral-900 mt-4">Slope Geometry</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Slope Angle (θ)</strong> — from 15° to 75°. Steeper slopes increase the gravitational component along the slope, making landslides more likely.</li>
-								<li><strong>Soil Height (H)</strong> — from 1 to 10 m, representing the thickness of the soil layer that could fail.</li>
-							</ul>
+							<div>
+								<h3 class="font-semibold text-neutral-900 mb-3">Geotechnical Parameters</h3>
 
-							<h3 class="font-semibold text-neutral-900 mt-4">Soil Properties</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Cohesion (c)</strong> — from 0 to 50 kPa. This is the internal "glue" between soil particles, giving soil strength independent of normal stress.</li>
-								<li><strong>Internal Friction Angle (φ)</strong> — from 15° to 45°. This reflects the frictional resistance between soil particles under normal stress; higher φ means more resistance to sliding.</li>
-								<li><strong>Unit Weight (γ)</strong> — from 16 to 22 kN/m³. This is the weight of soil per unit volume; heavier soil increases gravitational driving force on the slope.</li>
-								<li><strong>Porosity (n)</strong> — user-defined. Porosity influences how much water the soil can hold, which affects stability through water content and pore pressures.</li>
-							</ul>
+								<h4 class="font-medium text-neutral-800 mt-4 mb-2">Slope Geometry</h4>
+								<ul class="space-y-2 ml-0 list-none">
+									<li><strong>Slope Angle (θ)</strong> — from 15° to 75°. Steeper slopes increase the gravitational component along the slope, making landslides more likely.</li>
+									<li><strong>Soil Height (H)</strong> — from 1 to 10 m, representing the thickness of the soil layer that could fail.</li>
+								</ul>
 
-							<h3 class="font-semibold text-neutral-900 mt-4">Hydrological Factors</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Rainfall Intensity (I)</strong> — 0 to 100 mm/hr. Heavy rain increases water infiltration, increases weight, and can raise pore-water pressure, all of which destabilize slope.</li>
-								<li><strong>Pore Water Pressure (Pw)</strong> — 0 to 100 kPa. High pore-water pressure reduces effective stress in soil, decreasing shear strength and making landslide more likely.</li>
-							</ul>
+								<h4 class="font-medium text-neutral-800 mt-4 mb-2">Soil Properties</h4>
+								<ul class="space-y-2 ml-0 list-none">
+									<li><strong>Cohesion (c)</strong> — from 0 to 50 kPa. This is the internal "glue" between soil particles, giving soil strength independent of normal stress.</li>
+									<li><strong>Internal Friction Angle (φ)</strong> — from 15° to 45°. This reflects the frictional resistance between soil particles under normal stress; higher φ means more resistance to sliding.</li>
+									<li><strong>Unit Weight (γ)</strong> — from 16 to 22 kN/m³. This is the weight of soil per unit volume; heavier soil increases gravitational driving force on the slope.</li>
+									<li><strong>Porosity (n)</strong> — user-defined. Porosity influences how much water the soil can hold, which affects stability through water content and pore pressures.</li>
+								</ul>
 
-							<h3 class="font-semibold text-neutral-900 mt-4">Vegetation</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Vegetation Coverage (%)</strong> — 0 to 100%. Root systems help bind soil, add cohesion, reduce erosion, and may help manage water content, all contributing to slope stability.</li>
-							</ul>
+								<h4 class="font-medium text-neutral-800 mt-4 mb-2">Hydrological Factors</h4>
+								<ul class="space-y-2 ml-0 list-none">
+									<li><strong>Rainfall Intensity (I)</strong> — 0 to 100 mm/hr. Heavy rain increases water infiltration, increases weight, and can raise pore-water pressure, all of which destabilize slope.</li>
+									<li><strong>Pore Water Pressure (Pw)</strong> — 0 to 100 kPa. High pore-water pressure reduces effective stress in soil, decreasing shear strength and making landslide more likely.</li>
+								</ul>
 
-							<h3 class="font-semibold text-neutral-900 mt-6">Stability & Failure Indicators</h3>
-							<div class="space-y-3 mt-3">
-								<div>
-									<p><strong>Factor of Safety (FoS)</strong> – Represents the ratio of soil's resisting strength to the driving forces along the slope.</p>
-									<ul class="list-disc list-inside ml-4 mt-1 text-xs text-neutral-600">
-										<li>FoS ≥ 1.5 – Slope is stable.</li>
-										<li>FoS 1.0–1.5 – Slope stability is marginal; caution advised.</li>
-										<li>FoS &lt; 1.0 – Slope is unstable; landslide likely.</li>
-									</ul>
-								</div>
+								<h4 class="font-medium text-neutral-800 mt-4 mb-2">Vegetation</h4>
+								<ul class="space-y-2 ml-0 list-none">
+									<li><strong>Vegetation Coverage (%)</strong> — 0 to 100%. Root systems help bind soil, add cohesion, reduce erosion, and may help manage water content, all contributing to slope stability.</li>
+								</ul>
+							</div>
 
-								<div>
-									<p><strong>Probability of Failure (PoF)</strong> – The estimated likelihood (in percent) that a landslide will occur, accounting for variability in soil properties and environmental conditions.</p>
-									<ul class="list-disc list-inside ml-4 mt-1 text-xs text-neutral-600">
-										<li>PoF &lt; 5% – Very low risk.</li>
-										<li>PoF 20–50% – Moderate to high risk.</li>
-										<li>PoF &gt; 50% – Extremely high risk; failure imminent.</li>
-									</ul>
-								</div>
+							<div>
+								<h3 class="font-semibold text-neutral-900 mb-3">Stability & Failure Indicators</h3>
+								<div class="space-y-3">
+									<div>
+										<p class="mb-1"><strong>Factor of Safety (FoS)</strong> – Represents the ratio of soil's resisting strength to the driving forces along the slope.</p>
+										<ul class="space-y-1 ml-4 text-xs text-neutral-600 list-disc">
+											<li>FoS ≥ 1.5 – Slope is stable.</li>
+											<li>FoS 1.0–1.5 – Slope stability is marginal; caution advised.</li>
+											<li>FoS &lt; 1.0 – Slope is unstable; landslide likely.</li>
+										</ul>
+									</div>
 
-								<div>
-									<p><strong>Pore Pressure Ratio (rᵤ)</strong> – Indicates the ratio of water pressure within soil pores relative to the total stress. Higher values reduce soil strength and slope stability.</p>
-									<ul class="list-disc list-inside ml-4 mt-1 text-xs text-neutral-600">
-										<li>rᵤ 0–0.3 – Soil is relatively dry and stable.</li>
-										<li>rᵤ 0.5–0.7 – Soil is becoming saturated, reducing stability.</li>
-										<li>rᵤ &gt; 0.8 – Soil is highly saturated; failure risk is significant.</li>
-									</ul>
+									<div>
+										<p class="mb-1"><strong>Probability of Failure (PoF)</strong> – The estimated likelihood (in percent) that a landslide will occur, accounting for variability in soil properties and environmental conditions.</p>
+										<ul class="space-y-1 ml-4 text-xs text-neutral-600 list-disc">
+											<li>PoF &lt; 5% – Very low risk.</li>
+											<li>PoF 20–50% – Moderate to high risk.</li>
+											<li>PoF &gt; 50% – Extremely high risk; failure imminent.</li>
+										</ul>
+									</div>
+
+									<div>
+										<p class="mb-1"><strong>Pore Pressure Ratio (rᵤ)</strong> – Indicates the ratio of water pressure within soil pores relative to the total stress. Higher values reduce soil strength and slope stability.</p>
+										<ul class="space-y-1 ml-4 text-xs text-neutral-600 list-disc">
+											<li>rᵤ 0–0.3 – Soil is relatively dry and stable.</li>
+											<li>rᵤ 0.5–0.7 – Soil is becoming saturated, reducing stability.</li>
+											<li>rᵤ &gt; 0.8 – Soil is highly saturated; failure risk is significant.</li>
+										</ul>
+									</div>
+
+									<div>
+										<p class="mb-1"><strong>Effective Cohesion (c′)</strong> — The actual cohesion used in stability calculations, accounting for soil cohesion (and any extra cohesion from roots or vegetation). Effective cohesion contributes to the soil's shear strength under real‑world conditions.</p>
+									</div>
 								</div>
 							</div>
 						</div>
