@@ -131,16 +131,14 @@
 		<!-- 3. Hydrological / Water Conditions -->
 		<ParameterCard title="Hydrological Conditions" icon="fluent:drop-24-regular">
 			{#snippet children()}
-				<!-- Initial Soil Moisture slider hidden - kept for future use
 				<ParameterSlider
-					label="Initial Soil Moisture"
+					label="Pore-water Pressure"
 					bind:value={porePressure}
 					min={0}
 					max={100}
 					step={1}
-					unit="%"
+					unit=" kPa"
 				/>
-				-->
 				<ParameterSlider
 					label="Rainfall Intensity"
 					bind:value={rainfallIntensity}
