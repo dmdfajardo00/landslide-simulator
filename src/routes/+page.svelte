@@ -488,7 +488,10 @@
 		<!-- Simulation Controls Row -->
 		<div class="flex gap-2 p-2 border-b border-neutral-100">
 			<button
-				onclick={handleToggleRain}
+				onclick={() => {
+					isRaining = !isRaining;
+					handleToggleRain();
+				}}
 				class="flex-1 h-11 px-3 rounded flex items-center justify-center gap-2 text-xs font-medium transition-colors {isRaining
 					? 'bg-neutral-600 text-white'
 					: 'bg-neutral-900 text-white'}"
@@ -498,7 +501,7 @@
 				<span class="hidden xs:inline">{isRaining ? 'Stop' : 'Rain'}</span>
 			</button>
 			<button
-				onclick={handleTrigger}
+				onclick={() => handleTrigger()}
 				disabled={isTriggered}
 				class="flex-1 h-11 px-3 rounded flex items-center justify-center gap-2 text-xs font-medium transition-colors {isTriggered
 					? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
@@ -509,7 +512,7 @@
 				<span class="hidden xs:inline">{isTriggered ? 'Triggered' : 'Trigger'}</span>
 			</button>
 			<button
-				onclick={handleReset}
+				onclick={() => handleReset()}
 				class="flex-1 h-11 px-3 rounded border border-neutral-300 bg-white text-neutral-700 flex items-center justify-center gap-2 text-xs font-medium transition-colors"
 				title="Reset Simulation"
 			>
