@@ -44,10 +44,14 @@
 		boulderDensity = $bindable(15)
 	}: Props = $props();
 
-	// Format elapsed time as duration
+	// Format elapsed time as duration (seconds → minutes → hours)
 	function formatDuration(seconds: number): string {
-		const mins = Math.floor(seconds / 60);
-		const secs = seconds % 60;
+		const hours = Math.floor(seconds / 3600);
+		const mins = Math.floor((seconds % 3600) / 60);
+		const secs = (seconds % 60).toFixed(1);
+		if (hours > 0) {
+			return `${hours}h ${mins}m`;
+		}
 		if (mins > 0) {
 			return `${mins}m ${secs}s`;
 		}
@@ -78,8 +82,8 @@
 				<ParameterSlider
 					label="Slope Height"
 					bind:value={soilDepth}
-					min={0.5}
-					max={10}
+					min={0.8}
+					max={5}
 					step={0.1}
 					unit=" m"
 				/>
@@ -127,6 +131,7 @@
 		<!-- 3. Hydrological / Water Conditions -->
 		<ParameterCard title="Hydrological Conditions" icon="fluent:drop-24-regular">
 			{#snippet children()}
+				<!-- Initial Soil Moisture slider hidden - kept for future use
 				<ParameterSlider
 					label="Initial Soil Moisture"
 					bind:value={porePressure}
@@ -135,6 +140,7 @@
 					step={1}
 					unit="%"
 				/>
+				-->
 				<ParameterSlider
 					label="Rainfall Intensity"
 					bind:value={rainfallIntensity}
@@ -145,7 +151,7 @@
 				/>
 				<!-- Rainfall Duration Display -->
 				<div class="flex items-center justify-between py-2">
-					<span class="text-xs text-neutral-600">Simulation Time</span>
+					<span class="text-xs text-neutral-600">Rainfall Duration</span>
 					<span class="text-xs font-medium text-neutral-900">{formatDuration(elapsedTime)}</span>
 				</div>
 				<div class="flex items-center justify-between py-2 border-t border-neutral-100">
