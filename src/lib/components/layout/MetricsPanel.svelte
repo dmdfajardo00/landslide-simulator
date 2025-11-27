@@ -82,6 +82,70 @@
 	let showModal = $state(false);
 	let showAbout = $state(false);
 
+	// AI Assistant state
+	let showAI = $state(false);
+	let aiLoading = $state(false);
+	let aiQuestion = $state('');
+	let aiStreamedText = $state('');
+	let aiStreamInterval: ReturnType<typeof setInterval> | null = null;
+
+	const aiDemoText = `**Understanding Slope Stability Analysis**
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. **Factor of Safety (FoS)** is a critical metric that represents the ratio of resisting forces to driving forces on a slope. When FoS drops below 1.0, the slope is considered unstable and prone to failure.
+
+**Pore Water Pressure Effects**
+
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. The **pore pressure ratio (ru)** significantly affects slope stability by reducing the effective stress between soil particles. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Higher rainfall intensity leads to increased infiltration and elevated pore pressures.
+
+**Geotechnical Parameters**
+
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. **Cohesion** and **friction angle** are the two primary strength parameters in the Mohr-Coulomb failure criterion. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+**Mitigation Strategies**
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium. **Vegetation cover** plays a crucial role in slope stabilization through root reinforcement and rainfall interception. Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Proper drainage systems and retaining structures can significantly improve slope stability.`;
+
+	function startAIStream() {
+		aiLoading = true;
+		aiStreamedText = '';
+
+		// Simulate loading delay
+		setTimeout(() => {
+			aiLoading = false;
+			let charIndex = 0;
+
+			// Stream text character by character
+			aiStreamInterval = setInterval(() => {
+				if (charIndex < aiDemoText.length) {
+					// Add multiple characters per tick for faster streaming
+					const charsToAdd = Math.min(3, aiDemoText.length - charIndex);
+					aiStreamedText += aiDemoText.slice(charIndex, charIndex + charsToAdd);
+					charIndex += charsToAdd;
+				} else {
+					if (aiStreamInterval) {
+						clearInterval(aiStreamInterval);
+						aiStreamInterval = null;
+					}
+				}
+			}, 10);
+		}, 1500);
+	}
+
+	function closeAIModal() {
+		showAI = false;
+		if (aiStreamInterval) {
+			clearInterval(aiStreamInterval);
+			aiStreamInterval = null;
+		}
+		aiStreamedText = '';
+		aiQuestion = '';
+	}
+
+	// Simple markdown bold parser
+	function parseMarkdownBold(text: string): string {
+		return text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-neutral-900">$1</strong>');
+	}
+
 	// Generate SVG path for sparkline
 	function generatePath(data: number[], min: number, max: number, width: number = 240, height: number = 40) {
 		if (data.length < 2) return '';
@@ -242,6 +306,22 @@
 			class="px-3 py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
 		>
 			GEOTECHNICAL PARAMETERS
+		</button>
+	</div>
+
+	<!-- Ask AI Button -->
+	<div class="px-4 py-2 border-t border-neutral-100">
+		<button
+			onclick={() => {
+				showAI = true;
+				startAIStream();
+			}}
+			class="w-full px-3 py-2.5 text-xs font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded border border-neutral-900 transition-colors flex items-center justify-center gap-2"
+		>
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+			</svg>
+			ASK AI
 		</button>
 	</div>
 
@@ -697,6 +777,87 @@
 						class="px-4 py-2 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
 					>
 						Close
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- AI Assistant Modal -->
+{#if showAI}
+	<div class="fixed inset-0 bg-black/50 z-40" onclick={closeAIModal}></div>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={closeAIModal}>
+		<div class="bg-white rounded-lg shadow-xl w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+			<!-- Header -->
+			<div class="px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+				<div class="flex items-center gap-2">
+					<div class="w-8 h-8 rounded-full bg-neutral-900 flex items-center justify-center">
+						<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+						</svg>
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold text-neutral-900">AI Assistant</h3>
+						<p class="text-xs text-neutral-500">Ask about slope stability</p>
+					</div>
+				</div>
+				<button
+					onclick={closeAIModal}
+					class="text-neutral-400 hover:text-neutral-600 transition-colors"
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<!-- Content -->
+			<div class="h-64 overflow-y-auto p-4">
+				{#if aiLoading}
+					<!-- Shimmer Loading Skeleton -->
+					<div class="space-y-3 animate-pulse">
+						<div class="h-4 bg-neutral-200 rounded w-3/4"></div>
+						<div class="h-4 bg-neutral-200 rounded w-full"></div>
+						<div class="h-4 bg-neutral-200 rounded w-5/6"></div>
+						<div class="h-4 bg-neutral-200 rounded w-2/3"></div>
+						<div class="h-4 bg-neutral-200 rounded w-full"></div>
+						<div class="h-4 bg-neutral-200 rounded w-4/5"></div>
+						<div class="h-4 bg-neutral-200 rounded w-3/4"></div>
+						<div class="h-4 bg-neutral-200 rounded w-full"></div>
+					</div>
+				{:else if aiStreamedText}
+					<!-- Streamed Response with Markdown -->
+					<div class="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">
+						{@html parseMarkdownBold(aiStreamedText)}
+						<span class="inline-block w-1.5 h-4 bg-neutral-900 animate-pulse ml-0.5 align-middle"></span>
+					</div>
+				{:else}
+					<p class="text-sm text-neutral-500 text-center py-8">Ask a question to get started...</p>
+				{/if}
+			</div>
+
+			<!-- Input -->
+			<div class="px-4 py-3 border-t border-neutral-200 bg-neutral-50 rounded-b-lg">
+				<div class="flex gap-2">
+					<input
+						type="text"
+						bind:value={aiQuestion}
+						placeholder="Ask about landslide mechanics..."
+						class="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+						onkeydown={(e) => {
+							if (e.key === 'Enter' && aiQuestion.trim()) {
+								startAIStream();
+							}
+						}}
+					/>
+					<button
+						onclick={() => {
+							if (aiQuestion.trim()) startAIStream();
+						}}
+						class="px-4 py-2 text-sm font-semibold text-white bg-neutral-900 hover:bg-neutral-800 rounded transition-colors"
+					>
+						Send
 					</button>
 				</div>
 			</div>

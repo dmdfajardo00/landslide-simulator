@@ -73,7 +73,9 @@ export function calculateFailureZone(
 	slopeAngle: number,
 	soilDepth: number,
 	saturation: number,
-	severity: number = 0.5
+	severity: number = 0.5,
+	vegetation: number = 0,
+	erosion: number = 0
 ): FailureZone {
 	// Failure zone spans most of the slope width (70-90% of terrain width)
 	const marginX = worldScale * 0.1; // 10% margin on each side
@@ -91,9 +93,11 @@ export function calculateFailureZone(
 	// Runout distance - material flows DOWNHILL (toward LOW Z values)
 	// Steeper slopes and wetter conditions = longer runout
 	// Now also scaled by severity
+	// Erosion increases runout (weakened structure allows material to flow further)
 	const slopeFactor = slopeAngle / 30; // 1.0 at 30°, 2.0 at 60°
 	const runoutFactor = 1.5 + slopeFactor * 1.5 + saturation * 1.5;
-	const runoutLength = worldScale * 0.35 * runoutFactor * severityScale;
+	const erosionLengthFactor = 1 + (erosion * 0.25); // 0-25% longer runout
+	const runoutLength = worldScale * 0.35 * runoutFactor * severityScale * erosionLengthFactor;
 
 	// TOE is at BOTTOM of slope (LOW Z values) - material accumulates here
 	const toeZ = Math.max(headZ - runoutLength, worldScale * 0.1);
@@ -106,8 +110,14 @@ export function calculateFailureZone(
 	const slopeAmplifier = 1 + (slopeAngle - 20) / 30; // 1.0 at 20°, 2.0 at 50°
 	const saturationAmplifier = 1 + saturation * 1.5; // 1.0 at 0%, 2.5 at 100%
 
+	// Vegetation reduces failure depth (root reinforcement prevents shallow failures)
+	// Erosion increases failure depth (weakened structure allows deeper failures)
+	const vegetationDepthFactor = 1 - (vegetation * 0.35); // 0-35% reduction
+	const erosionDepthFactor = 1 + (erosion * 0.40);       // 0-40% increase
+	const vegErosionFactor = vegetationDepthFactor * erosionDepthFactor;
+
 	// Scale depth to be visually significant (2-15% of max elevation)
-	const rawDepth = baseDepth * slopeAmplifier * saturationAmplifier * severityScale;
+	const rawDepth = baseDepth * slopeAmplifier * saturationAmplifier * severityScale * vegErosionFactor;
 	const minVisibleDepth = maxElevation * 0.02; // At least 2% of max elevation
 	const maxDepth = maxElevation * 0.15; // Cap at 15% of max elevation
 	const failureDepth = Math.max(minVisibleDepth, Math.min(rawDepth, maxDepth));

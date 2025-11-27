@@ -30,6 +30,10 @@ export function updateInfiltration(
 	const { rainfallIntensity, hydraulicConductivity, vegetation, soilDepth, porosity = 0.35 } =
 		params;
 
+	// Rainfall interception - canopy intercepts up to 30% of rainfall
+	const interceptionFraction = vegetation * 0.30; // 0-30% intercepted
+	const effectiveRainfall = rainfallIntensity * (1 - interceptionFraction);
+
 	// Convert hydraulic conductivity from ×10⁻⁶ m/s to mm/hr
 	// 1 m/s = 3,600,000 mm/hr
 	const k_mmhr = hydraulicConductivity * 3600;
@@ -45,8 +49,8 @@ export function updateInfiltration(
 	// Uses modified Green-Ampt approach: capacity increases with unsaturated depth
 	const infiltrationCapacity = k_mmhr * (1 + alpha * (1 - saturationRatio));
 
-	// Actual infiltration is the minimum of rainfall and capacity
-	const infiltrationRate = Math.min(rainfallIntensity, infiltrationCapacity);
+	// Actual infiltration is the minimum of effective rainfall and capacity
+	const infiltrationRate = Math.min(effectiveRainfall, infiltrationCapacity);
 
 	// Convert infiltration rate from mm/hr to m/s for depth calculation
 	const infiltrationRate_ms = infiltrationRate / 3600000;
@@ -76,4 +80,31 @@ export function updateInfiltration(
 		porePressureRatio: newRu,
 		infiltrationRate: infiltrationRate
 	};
+}
+
+/**
+ * Calculate evapotranspiration rate based on vegetation and saturation
+ * @param vegetation - Vegetation cover fraction (0-1)
+ * @param saturation - Current saturation ratio (0-1)
+ * @param potentialET - Potential ET rate in mm/day (default 4.0 for temperate climate)
+ * @returns ET rate in m/s (for direct use with deltaTime)
+ */
+export function calculateEvapotranspiration(
+	vegetation: number,
+	saturation: number,
+	potentialET: number = 4.0 // mm/day reference for grass
+): number {
+	// ET only occurs if there's water and vegetation
+	if (vegetation <= 0 || saturation <= 0) return 0;
+
+	// Actual ET depends on vegetation density and water availability
+	// At full vegetation and saturation: ET = potentialET
+	// Reduced proportionally by vegetation cover and available water
+	const actualET_mm_day = potentialET * vegetation * Math.sqrt(saturation);
+
+	// Convert mm/day to m/s for use with simulation time steps
+	// 1 mm/day = 1e-3 m / (24 * 3600 s) = 1.157e-8 m/s
+	const ET_m_per_s = actualET_mm_day * 1.157e-8;
+
+	return ET_m_per_s;
 }

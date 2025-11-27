@@ -8,6 +8,7 @@
 		calculatePoF,
 		calculatePorePressure,
 		updateInfiltration,
+		calculateEvapotranspiration,
 		createLandslideState,
 		calculateFailureZone,
 		updateLandslideState,
@@ -113,15 +114,25 @@
 	const DELTA_TIME = 0.1; // 100ms in seconds
 
 	function updatePhysics() {
+		// Calculate effective parameters based on erosion
+		// Erosion reduces effective soil depth (material removed)
+		const effectiveSoilDepth = soilDepth * (1 - (erosion / 100) * 0.40);
+
+		// Erosion increases hydraulic conductivity (loosened structure)
+		const effectiveK = hydraulicConductivity * (1 + (erosion / 100) * 0.50);
+
+		// Erosion reduces friction angle (weathered particles)
+		const effectiveFrictionAngle = frictionAngle * (1 - (erosion / 100) * 0.15);
+
 		// Update infiltration if raining
 		if (isRaining) {
 			hydrologicalState = updateInfiltration(
 				hydrologicalState,
 				{
 					rainfallIntensity,
-					hydraulicConductivity,
+					hydraulicConductivity: effectiveK,
 					vegetation: vegetationCover / 100,
-					soilDepth,
+					soilDepth: effectiveSoilDepth,
 					porosity: 0.35
 				},
 				DELTA_TIME
@@ -129,10 +140,28 @@
 			rainfallAccumulated += (rainfallIntensity * DELTA_TIME) / 3600; // Convert mm/hr to mm per tick
 		}
 
+		// Apply evapotranspiration - vegetation removes water from soil
+		// ET occurs continuously (even without rain) if there's vegetation and saturation
+		if (vegetationCover > 0 && hydrologicalState.saturationDepth > 0) {
+			const currentSaturation = effectiveSoilDepth > 0
+				? hydrologicalState.saturationDepth / effectiveSoilDepth
+				: 0;
+			const etRate = calculateEvapotranspiration(
+				vegetationCover / 100,
+				currentSaturation,
+				4.0 // 4 mm/day potential ET (temperate climate)
+			);
+			// Reduce saturation depth by ET (convert rate to depth change)
+			hydrologicalState.saturationDepth = Math.max(
+				0,
+				hydrologicalState.saturationDepth - etRate * DELTA_TIME
+			);
+		}
+
 		// Calculate pore pressure from saturation
 		const poreResult = calculatePorePressure(
 			hydrologicalState.saturationDepth,
-			soilDepth,
+			effectiveSoilDepth,
 			unitWeight
 		);
 		hydrologicalState.porePressure = poreResult.Pw;
@@ -151,11 +180,11 @@
 		fos = calculateFoS(
 			{
 				slopeAngle,
-				soilDepth,
+				soilDepth: effectiveSoilDepth,
 				unitWeight,
 				cohesion,
-				frictionAngle,
-				hydraulicConductivity
+				frictionAngle: effectiveFrictionAngle,
+				hydraulicConductivity: effectiveK
 			},
 			hydrologicalState.porePressure
 		);
@@ -208,7 +237,9 @@
 				slopeAngle,
 				soilDepth,
 				effectiveSaturation,
-				landslideSeverity / 100 // Normalize to 0-1 range
+				landslideSeverity / 100, // Normalize to 0-1 range
+				vegetationCover / 100,   // Vegetation parameter (0-1)
+				erosion / 100            // Erosion parameter (0-1)
 			);
 
 			// Calculate initial terrain deformation (progress starts at 0)
@@ -295,11 +326,14 @@
 		scarpDepth = null;
 		depositionDepth = null;
 
-		// Recalculate initial state
+		// Recalculate initial state with effective parameters
 		ru = 0;
 		cohesion = cohesionInput;
+		const effectiveSoilDepth = soilDepth * (1 - (erosion / 100) * 0.40);
+		const effectiveK = hydraulicConductivity * (1 + (erosion / 100) * 0.50);
+		const effectiveFrictionAngle = frictionAngle * (1 - (erosion / 100) * 0.15);
 		fos = calculateFoS(
-			{ slopeAngle, soilDepth, unitWeight, cohesion: cohesionInput, frictionAngle, hydraulicConductivity },
+			{ slopeAngle, soilDepth: effectiveSoilDepth, unitWeight, cohesion: cohesionInput, frictionAngle: effectiveFrictionAngle, hydraulicConductivity: effectiveK },
 			0
 		);
 		pof = calculatePoF(fos, coefficientOfVariation);
