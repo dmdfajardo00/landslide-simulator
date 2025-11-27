@@ -443,10 +443,10 @@
 <!-- Documentation Modal -->
 {#if showModal}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showModal = false)}></div>
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={() => (showModal = false)}>
-		<div class="bg-white rounded-lg shadow-xl flex h-full max-h-[90vh] w-full max-w-4xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
-			<!-- Sidebar Tabs -->
-			<div class="w-48 border-r border-neutral-200 bg-neutral-50 flex flex-col">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onclick={() => (showModal = false)}>
+		<div class="bg-white rounded-lg shadow-xl flex flex-col sm:flex-row h-full max-h-[95vh] sm:max-h-[90vh] w-full sm:max-w-4xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
+			<!-- Sidebar Tabs - Hidden on mobile, shown on sm+ -->
+			<div class="hidden sm:flex sm:w-48 border-r border-neutral-200 bg-neutral-50 flex-col">
 				<div class="px-4 py-3 border-b border-neutral-200">
 					<h3 class="text-sm font-semibold text-neutral-900">Documentation</h3>
 				</div>
@@ -587,9 +587,9 @@
 <!-- About Modal -->
 {#if showAbout}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showAbout = false)}></div>
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={() => (showAbout = false)}>
-		<div class="bg-white rounded-lg shadow-xl max-h-[90vh] w-full max-w-2xl overflow-y-auto" onclick={(e) => e.stopPropagation()}>
-			<div class="p-8">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onclick={() => (showAbout = false)}>
+		<div class="bg-white rounded-lg shadow-xl max-h-[95vh] sm:max-h-[90vh] w-full sm:max-w-2xl overflow-y-auto" onclick={(e) => e.stopPropagation()}>
+			<div class="p-4 sm:p-8">
 				<div class="flex items-center justify-between mb-6">
 					<h1 class="text-2xl font-bold text-neutral-900">About This Project</h1>
 					<button
@@ -891,8 +891,8 @@
 <!-- AI Assistant Modal -->
 {#if showAI}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={closeAIModal}></div>
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={closeAIModal}>
-		<div class="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[80vh]" onclick={(e) => e.stopPropagation()}>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onclick={closeAIModal}>
+		<div class="bg-white rounded-lg shadow-xl w-full sm:max-w-lg flex flex-col max-h-[95vh] sm:max-h-[80vh]" onclick={(e) => e.stopPropagation()}>
 			<!-- Header -->
 			<div class="px-4 py-3 border-b border-neutral-200 flex items-center justify-between shrink-0">
 				<div class="flex items-center gap-2">

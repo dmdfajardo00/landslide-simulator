@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
 	import { onDestroy, untrack } from 'svelte';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import ViewportPlaceholder from '$lib/components/layout/ViewportPlaceholder.svelte';
@@ -408,29 +409,35 @@
 	onDestroy(() => {
 		stopSimulation();
 	});
+
+	// Mobile drawer state
+	let showSidebarDrawer = $state(false);
+	let showMetricsDrawer = $state(false);
 </script>
 
 <div class="flex h-screen bg-white relative">
-	<!-- Left Sidebar - Full Height -->
-	<Sidebar
-		bind:slopeAngle
-		bind:soilDepth
-		bind:cohesion={cohesionInput}
-		bind:frictionAngle
-		bind:unitWeight
-		bind:porosity
-		bind:porePressure
-		bind:rainfallIntensity
-		bind:elapsedTime
-		bind:rainfallAmount={rainfallAccumulated}
-		bind:vegetationCover
-		bind:landslideSeverity
-		bind:boulderDensity
-	/>
+	<!-- Left Sidebar - Hidden on mobile, shown on md+ -->
+	<div class="hidden md:block md:w-80 md:flex-shrink-0">
+		<Sidebar
+			bind:slopeAngle
+			bind:soilDepth
+			bind:cohesion={cohesionInput}
+			bind:frictionAngle
+			bind:unitWeight
+			bind:porosity
+			bind:porePressure
+			bind:rainfallIntensity
+			bind:elapsedTime
+			bind:rainfallAmount={rainfallAccumulated}
+			bind:vegetationCover
+			bind:landslideSeverity
+			bind:boulderDensity
+		/>
+	</div>
 
 	<!-- Main Content Area -->
-	<div class="flex flex-1 overflow-hidden">
-		<!-- Center Viewport -->
+	<div class="flex flex-1 flex-col md:flex-row overflow-hidden">
+		<!-- Center Viewport - Full height on mobile, flexible on desktop -->
 		<ViewportPlaceholder
 			{isRaining}
 			{rainfallIntensity}
@@ -450,28 +457,50 @@
 			{boulderDensity}
 		/>
 
-		<!-- Right Metrics Panel -->
-		<MetricsPanel
-			{fos}
-			{pof}
-			{ru}
-			{cohesion}
-			{displacedParticles}
-			{slopeAngle}
-			{soilDepth}
-			{unitWeight}
-			{frictionAngle}
-			{porosity}
-			{vegetationCover}
-			initialMoisture={porePressure}
-			{rainfallIntensity}
-			{isRaining}
-			{isTriggered}
-		/>
+		<!-- Right Metrics Panel - Hidden on mobile, shown on md+ -->
+		<div class="hidden md:block md:w-96 md:flex-shrink-0">
+			<MetricsPanel
+				{fos}
+				{pof}
+				{ru}
+				{cohesion}
+				{displacedParticles}
+				{slopeAngle}
+				{soilDepth}
+				{unitWeight}
+				{frictionAngle}
+				{porosity}
+				{vegetationCover}
+				initialMoisture={porePressure}
+				{rainfallIntensity}
+				{isRaining}
+				{isTriggered}
+			/>
+		</div>
 	</div>
 
-	<!-- Fixed Bottom Left Action Buttons -->
-	<div class="fixed bottom-0 left-0 w-80 p-4 bg-white border-t border-r border-neutral-200 z-10">
+	<!-- Mobile Action Buttons - Fixed at bottom on sm, relative on md+ -->
+	<div class="fixed bottom-0 left-0 right-0 md:hidden p-3 bg-white border-t border-neutral-200 z-10 flex gap-2">
+		<button
+			class="flex-1 h-12 px-3 py-2 bg-neutral-900 text-white rounded hover:bg-neutral-800 flex items-center justify-center gap-2 min-w-0 text-sm"
+			onclick={() => (showSidebarDrawer = true)}
+			title="Parameters"
+		>
+			<Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
+			<span class="hidden sm:inline">Parameters</span>
+		</button>
+		<button
+			class="flex-1 h-12 px-3 py-2 bg-neutral-900 text-white rounded hover:bg-neutral-800 flex items-center justify-center gap-2 min-w-0 text-sm"
+			onclick={() => (showMetricsDrawer = true)}
+			title="Metrics"
+		>
+			<Icon icon="fluent:chart-24-regular" class="w-5 h-5" />
+			<span class="hidden sm:inline">Metrics</span>
+		</button>
+	</div>
+
+	<!-- Desktop Action Buttons - Show on md+ below sidebar -->
+	<div class="hidden md:block md:absolute md:bottom-0 md:left-0 md:w-80 md:p-4 md:bg-white md:border-t md:border-r md:border-neutral-200 md:z-10">
 		<ActionButtons
 			bind:isRaining
 			{isTriggered}
@@ -480,4 +509,70 @@
 			onReset={handleReset}
 		/>
 	</div>
+
+	<!-- Mobile Sidebar Drawer -->
+	{#if showSidebarDrawer}
+		<div class="fixed inset-0 md:hidden z-40" onclick={() => (showSidebarDrawer = false)}></div>
+		<div class="fixed inset-y-0 left-0 w-80 md:hidden z-50 bg-white overflow-y-auto transition-transform">
+			<div class="p-3 border-b border-neutral-200 flex items-center justify-between">
+				<h2 class="text-lg font-semibold">Parameters</h2>
+				<button
+					class="p-2 hover:bg-neutral-100 rounded"
+					onclick={() => (showSidebarDrawer = false)}
+					title="Close"
+				>
+					✕
+				</button>
+			</div>
+			<Sidebar
+				bind:slopeAngle
+				bind:soilDepth
+				bind:cohesion={cohesionInput}
+				bind:frictionAngle
+				bind:unitWeight
+				bind:porosity
+				bind:porePressure
+				bind:rainfallIntensity
+				bind:elapsedTime
+				bind:rainfallAmount={rainfallAccumulated}
+				bind:vegetationCover
+				bind:landslideSeverity
+				bind:boulderDensity
+			/>
+		</div>
+	{/if}
+
+	<!-- Mobile Metrics Drawer -->
+	{#if showMetricsDrawer}
+		<div class="fixed inset-0 md:hidden z-40" onclick={() => (showMetricsDrawer = false)}></div>
+		<div class="fixed inset-y-0 right-0 w-full sm:w-96 md:hidden z-50 bg-white overflow-y-auto transition-transform">
+			<div class="p-3 border-b border-neutral-200 flex items-center justify-between">
+				<h2 class="text-lg font-semibold">Metrics & Analysis</h2>
+				<button
+					class="p-2 hover:bg-neutral-100 rounded"
+					onclick={() => (showMetricsDrawer = false)}
+					title="Close"
+				>
+					✕
+				</button>
+			</div>
+			<MetricsPanel
+				{fos}
+				{pof}
+				{ru}
+				{cohesion}
+				{displacedParticles}
+				{slopeAngle}
+				{soilDepth}
+				{unitWeight}
+				{frictionAngle}
+				{porosity}
+				{vegetationCover}
+				initialMoisture={porePressure}
+				{rainfallIntensity}
+				{isRaining}
+				{isTriggered}
+			/>
+		</div>
+	{/if}
 </div>
