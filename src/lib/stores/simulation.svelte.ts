@@ -6,6 +6,11 @@
  */
 
 import { Color } from 'three';
+import {
+	calculateFoS as calculateFoSPhysics,
+	calculatePoF as calculatePoFPhysics,
+	type GeotechnicalParams as PhysicsGeotechnicalParams
+} from '$lib/simulation/physics';
 
 // ============================================================================
 // Type Definitions
@@ -84,6 +89,10 @@ export interface EnvironmentalParams {
 // Geotechnical Parameters
 // ============================================================================
 
+/**
+ * Store-specific geotechnical parameters.
+ * Extends PhysicsGeotechnicalParams with additional properties for simulation state.
+ */
 export interface GeotechnicalParams {
   soilDepth: number;              // Soil thickness (m)
   unitWeight: number;             // Soil unit weight (kN/m³)
@@ -248,64 +257,35 @@ function createSimulationStore() {
 
   /**
    * Calculate Factor of Safety based on current parameters
-   * Simplified Bishop Method implementation
+   * Uses infinite slope analysis from physics module
    */
   function calculateFoS(): number {
     const { cohesion, frictionAngle, slopeAngle, unitWeight, soilDepth } = geotechnical;
     const { ru } = simulationState;
 
-    // Convert angles to radians
-    const alpha = (slopeAngle * Math.PI) / 180;
-    const phi = (frictionAngle * Math.PI) / 180;
+    // Calculate pore pressure from ru
+    // ru = Pw / (γ·z·cos²θ), so Pw = ru · γ · z · cos²θ
+    const thetaRad = (slopeAngle * Math.PI) / 180;
+    const cos2Theta = Math.cos(thetaRad) * Math.cos(thetaRad);
+    const porePressure = ru * unitWeight * soilDepth * cos2Theta;
 
-    // Simplified calculation (single slice approximation)
-    // FoS = [c' + (γ·z·(1-ru))·tan(φ')] / [γ·z·sin(α)]
-    const effectiveStress = unitWeight * soilDepth * (1 - ru);
-    const resistance = cohesion + effectiveStress * Math.tan(phi);
-    const drivingForce = unitWeight * soilDepth * Math.sin(alpha);
-
-    if (drivingForce === 0) return 999; // Prevent division by zero
-    return resistance / drivingForce;
+    // Use physics module implementation
+    return calculateFoSPhysics(
+      { slopeAngle, soilDepth, unitWeight, cohesion, frictionAngle },
+      porePressure
+    );
   }
 
   /**
    * Calculate Probability of Failure using FOSM method
+   * Uses reliability analysis from physics module
    */
   function calculatePoF(): number {
     const { coefficientOfVariation } = geotechnical;
     const fos = simulationState.fos;
 
-    // Standard deviation of FoS
-    const sigma = fos * coefficientOfVariation;
-
-    // Reliability index β = (E[FoS] - 1) / σ[FoS]
-    const beta = (fos - 1) / sigma;
-
-    // Approximate probability using normal distribution
-    // Pf = Φ(-β) where Φ is the standard normal CDF
-    const pf = 0.5 * (1 - erf(beta / Math.sqrt(2)));
-
-    return Math.max(0, Math.min(1, pf)) * 100; // Convert to percentage
-  }
-
-  /**
-   * Error function approximation for normal distribution
-   */
-  function erf(x: number): number {
-    const sign = x >= 0 ? 1 : -1;
-    x = Math.abs(x);
-
-    const a1 = 0.254829592;
-    const a2 = -0.284496736;
-    const a3 = 1.421413741;
-    const a4 = -1.453152027;
-    const a5 = 1.061405429;
-    const p = 0.3275911;
-
-    const t = 1 / (1 + p * x);
-    const y = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-
-    return sign * y;
+    // Use physics module implementation
+    return calculatePoFPhysics(fos, coefficientOfVariation);
   }
 
   /**

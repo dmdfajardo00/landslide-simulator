@@ -137,8 +137,13 @@
 		hydrologicalState.porePressureRatio = poreResult.ru;
 		ru = poreResult.ru;
 
-		// Calculate effective cohesion (reduced by saturation)
-		cohesion = cohesionInput * (1 - ru * 0.5);
+		// Calculate effective cohesion with improved geotechnical model
+		// Uses exponential decay to model matric suction loss in unsaturated soils
+		// Includes minimum cohesion floor to maintain residual strength
+		const saturationEffect = Math.pow(ru, 1.5); // Non-linear reduction (accelerates at high ru)
+		const minCohesionRatio = 0.15; // Cohesion retains at least 15% of input (residual strength)
+		const reductionFactor = 1 - (1 - minCohesionRatio) * saturationEffect;
+		cohesion = cohesionInput * Math.max(minCohesionRatio, reductionFactor);
 
 		// Calculate Factor of Safety
 		fos = calculateFoS(

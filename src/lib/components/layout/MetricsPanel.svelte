@@ -22,6 +22,7 @@
 	let fosHistory = $state<number[]>([fos]);
 	let pofHistory = $state<number[]>([pof]);
 	let ruHistory = $state<number[]>([ru]);
+	let cohesionHistory = $state<number[]>([cohesion]);
 	let lastUpdateTime = 0;
 
 	// Throttled history update - only every 500ms to reduce SVG recalculations
@@ -35,10 +36,12 @@
 			fosHistory = [...fosHistory.slice(-MAX_HISTORY + 1), fos];
 			pofHistory = [...pofHistory.slice(-MAX_HISTORY + 1), pof];
 			ruHistory = [...ruHistory.slice(-MAX_HISTORY + 1), ru];
+			cohesionHistory = [...cohesionHistory.slice(-MAX_HISTORY + 1), cohesion];
 		} else {
 			fosHistory = [...fosHistory, fos];
 			pofHistory = [...pofHistory, pof];
 			ruHistory = [...ruHistory, ru];
+			cohesionHistory = [...cohesionHistory, cohesion];
 		}
 	});
 
@@ -71,7 +74,7 @@
 		{ label: 'Factor of Safety', abbrev: 'FoS', value: fos.toFixed(3), unit: '', status: fosStatus, history: fosHistory, min: 0.5, max: 3 },
 		{ label: 'Failure Probability', abbrev: 'PoF', value: pof.toFixed(2), unit: '%', status: pofStatus, history: pofHistory, min: 0, max: 100 },
 		{ label: 'Pore Pressure Ratio', abbrev: 'ru', value: ru.toFixed(3), unit: '', status: ruStatus, history: ruHistory, min: 0, max: 1 },
-		{ label: 'Effective Cohesion', abbrev: "c'", value: cohesion.toFixed(1), unit: 'kPa', status: cohesionStatus, history: [], min: 0, max: 30 }
+		{ label: 'Effective Cohesion', abbrev: "c'", value: cohesion.toFixed(1), unit: 'kPa', status: cohesionStatus, history: cohesionHistory, min: 0, max: 30 }
 	]);
 
 	// Modal state
@@ -497,6 +500,192 @@
 					<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
 						<p class="text-sm text-neutral-700">
 							<strong>Landslide Hazard Data:</strong> <a href="/map" class="text-blue-600 hover:text-blue-700 transition-colors">Cebu Landslide Hazards Dataset</a>
+						</p>
+					</div>
+				</div>
+
+				<!-- Tech Stack & Libraries -->
+				<div class="border-t border-neutral-200 pt-6 mt-6">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Tech Stack & Libraries</h2>
+					<div class="space-y-4">
+						<!-- Core Framework -->
+						<div>
+							<h3 class="text-sm font-semibold text-neutral-800 mb-2">Core Framework</h3>
+							<div class="bg-neutral-50 rounded-lg border border-neutral-200 overflow-hidden">
+								<table class="w-full text-xs">
+									<thead class="bg-neutral-100">
+										<tr>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">Library</th>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">License</th>
+											<th class="px-3 py-2 text-center font-semibold text-neutral-600">OSS</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-neutral-100">
+										<tr>
+											<td class="px-3 py-2"><a href="https://svelte.dev" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Svelte 5</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://svelte.dev/docs/kit" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">SvelteKit</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://www.typescriptlang.org" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">TypeScript</a></td>
+											<td class="px-3 py-2 text-neutral-600">Apache 2.0</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://vite.dev" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Vite</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<!-- 3D & Physics -->
+						<div>
+							<h3 class="text-sm font-semibold text-neutral-800 mb-2">3D Graphics & Physics</h3>
+							<div class="bg-neutral-50 rounded-lg border border-neutral-200 overflow-hidden">
+								<table class="w-full text-xs">
+									<thead class="bg-neutral-100">
+										<tr>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">Library</th>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">License</th>
+											<th class="px-3 py-2 text-center font-semibold text-neutral-600">OSS</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-neutral-100">
+										<tr>
+											<td class="px-3 py-2"><a href="https://threejs.org" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Three.js</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://threlte.xyz" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Threlte</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://rapier.rs" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Rapier3D</a></td>
+											<td class="px-3 py-2 text-neutral-600">Apache 2.0</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://github.com/jwagner/simplex-noise.js" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">simplex-noise</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<!-- Mapping -->
+						<div>
+							<h3 class="text-sm font-semibold text-neutral-800 mb-2">Mapping</h3>
+							<div class="bg-neutral-50 rounded-lg border border-neutral-200 overflow-hidden">
+								<table class="w-full text-xs">
+									<thead class="bg-neutral-100">
+										<tr>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">Library</th>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">License</th>
+											<th class="px-3 py-2 text-center font-semibold text-neutral-600">OSS</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-neutral-100">
+										<tr>
+											<td class="px-3 py-2"><a href="https://maplibre.org" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">MapLibre GL JS</a></td>
+											<td class="px-3 py-2 text-neutral-600">BSD-3-Clause</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://protomaps.com/docs/pmtiles" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">PMTiles</a></td>
+											<td class="px-3 py-2 text-neutral-600">BSD-3-Clause</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<!-- UI Components -->
+						<div>
+							<h3 class="text-sm font-semibold text-neutral-800 mb-2">UI Components & Styling</h3>
+							<div class="bg-neutral-50 rounded-lg border border-neutral-200 overflow-hidden">
+								<table class="w-full text-xs">
+									<thead class="bg-neutral-100">
+										<tr>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">Library</th>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">License</th>
+											<th class="px-3 py-2 text-center font-semibold text-neutral-600">OSS</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-neutral-100">
+										<tr>
+											<td class="px-3 py-2"><a href="https://tailwindcss.com" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Tailwind CSS</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://www.bits-ui.com" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Bits UI</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://www.tailwind-variants.org" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Tailwind Variants</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://iconify.design" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Iconify</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+										<tr>
+											<td class="px-3 py-2"><a href="https://lucide.dev" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Lucide</a></td>
+											<td class="px-3 py-2 text-neutral-600">ISC</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<!-- Audio -->
+						<div>
+							<h3 class="text-sm font-semibold text-neutral-800 mb-2">Audio</h3>
+							<div class="bg-neutral-50 rounded-lg border border-neutral-200 overflow-hidden">
+								<table class="w-full text-xs">
+									<thead class="bg-neutral-100">
+										<tr>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">Library</th>
+											<th class="px-3 py-2 text-left font-semibold text-neutral-600">License</th>
+											<th class="px-3 py-2 text-center font-semibold text-neutral-600">OSS</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-neutral-100">
+										<tr>
+											<td class="px-3 py-2"><a href="https://howlerjs.com" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Howler.js</a></td>
+											<td class="px-3 py-2 text-neutral-600">MIT</td>
+											<td class="px-3 py-2 text-center text-green-600">✓</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Disclaimer -->
+				<div class="border-t border-neutral-200 pt-6 mt-6">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Disclaimer</h2>
+					<div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+						<p class="text-xs text-amber-800 leading-relaxed">
+							<strong>Educational Use Only:</strong> This project is developed strictly for educational and non-profit purposes as part of academic research at Cebu Normal University. The simulation is intended to demonstrate geotechnical engineering concepts and should not be used for professional engineering assessments, real-world hazard predictions, or any commercial applications. The developers and researchers assume no liability for any use of this software beyond its intended educational scope.
 						</p>
 					</div>
 				</div>
