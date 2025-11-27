@@ -4,6 +4,7 @@
 	import Trees from '$lib/components/viewport/Trees.svelte';
 	import Rain from '$lib/components/viewport/Rain.svelte';
 	import RainAudio from '$lib/components/viewport/RainAudio.svelte';
+	import LandslideAudio from '$lib/components/viewport/LandslideAudio.svelte';
 	import Debris from '$lib/components/viewport/Debris.svelte';
 	import DustCloud from '$lib/components/viewport/DustCloud.svelte';
 	import CameraController from '$lib/components/viewport/CameraController.svelte';
@@ -130,6 +131,13 @@
 	<RainAudio
 		{isRaining}
 		{rainfallIntensity}
+	/>
+
+	<!-- Landslide Audio (phase-synced rumble sound) -->
+	<LandslideAudio
+		isActive={isLandslideActive}
+		progress={landslideProgress}
+		severity={landslideSeverity}
 	/>
 
 	<!-- Overlay info -->
