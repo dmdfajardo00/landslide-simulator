@@ -1,53 +1,58 @@
 <script lang="ts">
 	import ParameterCard from '$lib/components/controls/ParameterCard.svelte';
 	import ParameterSlider from '$lib/components/controls/ParameterSlider.svelte';
-	import TimeDisplay from '$lib/components/controls/TimeDisplay.svelte';
 
 	interface Props {
+		// Slope Geometry
 		slopeAngle?: number;
-		maxElevation?: number;
-		elapsedTime?: number;
-		rainfallAmount?: number;
-		rainfallIntensity?: number;
-		vegetationCover?: number;
 		soilDepth?: number;
-		// Environmental
-		erosion?: number;
-		soilMoisture?: number;
-		// Geotechnical
-		unitWeight?: number;
+		// Soil Properties
 		cohesion?: number;
 		frictionAngle?: number;
-		hydraulicConductivity?: number;
-		// Reliability
-		coefficientOfVariation?: number;
-		// Landslide visualization
+		unitWeight?: number;
+		porosity?: number;
+		// Hydrological
+		porePressure?: number;
+		rainfallIntensity?: number;
+		elapsedTime?: number;
+		rainfallAmount?: number;
+		// Vegetation
+		vegetationCover?: number;
+		// Visualization (kept for 3D rendering)
 		landslideSeverity?: number;
 		boulderDensity?: number;
 	}
 
 	let {
+		// Slope Geometry
 		slopeAngle = $bindable(30),
-		maxElevation = $bindable(50),
-		elapsedTime = $bindable(0),
-		rainfallAmount = $bindable(0),
-		rainfallIntensity = $bindable(25),
-		vegetationCover = $bindable(70),
 		soilDepth = $bindable(3.0),
-		// Environmental
-		erosion = $bindable(20),
-		soilMoisture = $bindable(30),
-		// Geotechnical
-		unitWeight = $bindable(19.0),
+		// Soil Properties
 		cohesion = $bindable(15),
 		frictionAngle = $bindable(32),
-		hydraulicConductivity = $bindable(5.0),
-		// Reliability
-		coefficientOfVariation = $bindable(0.15),
-		// Landslide visualization
+		unitWeight = $bindable(19.0),
+		porosity = $bindable(0.35),
+		// Hydrological
+		porePressure = $bindable(30),
+		rainfallIntensity = $bindable(25),
+		elapsedTime = $bindable(0),
+		rainfallAmount = $bindable(0),
+		// Vegetation
+		vegetationCover = $bindable(70),
+		// Visualization
 		landslideSeverity = $bindable(50),
 		boulderDensity = $bindable(15)
 	}: Props = $props();
+
+	// Format elapsed time as duration
+	function formatDuration(seconds: number): string {
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		if (mins > 0) {
+			return `${mins}m ${secs}s`;
+		}
+		return `${secs}s`;
+	}
 </script>
 
 <aside class="w-80 h-full min-h-0 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col">
@@ -59,28 +64,72 @@
 
 	<!-- Sidebar Content -->
 	<div class="flex-1 p-4 space-y-3 pb-40">
-		<!-- Environmental Factors -->
-		<ParameterCard title="Environmental Factors" icon="fluent:plant-grass-20-regular">
+		<!-- 1. Slope Geometry -->
+		<ParameterCard title="Slope Geometry" icon="fluent:triangle-24-regular">
 			{#snippet children()}
 				<ParameterSlider
-					label="Vegetation Cover"
-					bind:value={vegetationCover}
+					label="Slope Angle"
+					bind:value={slopeAngle}
 					min={0}
-					max={100}
+					max={90}
 					step={1}
-					unit="%"
+					unit="°"
 				/>
 				<ParameterSlider
-					label="Soil Erosion Level"
-					bind:value={erosion}
+					label="Depth to Failure Plane"
+					bind:value={soilDepth}
+					min={0.5}
+					max={10}
+					step={0.1}
+					unit=" m"
+				/>
+			{/snippet}
+		</ParameterCard>
+
+		<!-- 2. Soil / Material Properties -->
+		<ParameterCard title="Soil Properties" icon="fluent:cube-24-regular">
+			{#snippet children()}
+				<ParameterSlider
+					label="Cohesion (c')"
+					bind:value={cohesion}
 					min={0}
-					max={100}
+					max={50}
 					step={1}
-					unit="%"
+					unit=" kPa"
 				/>
 				<ParameterSlider
-					label="Initial Soil Moisture"
-					bind:value={soilMoisture}
+					label="Internal Friction Angle (φ')"
+					bind:value={frictionAngle}
+					min={15}
+					max={45}
+					step={1}
+					unit="°"
+				/>
+				<ParameterSlider
+					label="Unit Weight (γ)"
+					bind:value={unitWeight}
+					min={10}
+					max={25}
+					step={0.5}
+					unit=" kN/m³"
+				/>
+				<ParameterSlider
+					label="Porosity (n)"
+					bind:value={porosity}
+					min={0.1}
+					max={0.6}
+					step={0.01}
+					unit=""
+				/>
+			{/snippet}
+		</ParameterCard>
+
+		<!-- 3. Hydrological / Water Conditions -->
+		<ParameterCard title="Hydrological Conditions" icon="fluent:drop-24-regular">
+			{#snippet children()}
+				<ParameterSlider
+					label="Pore-water Pressure (ru)"
+					bind:value={porePressure}
 					min={0}
 					max={100}
 					step={1}
@@ -94,78 +143,33 @@
 					step={1}
 					unit=" mm/hr"
 				/>
+				<!-- Rainfall Duration Display -->
+				<div class="flex items-center justify-between py-2">
+					<span class="text-xs text-neutral-600">Rainfall Duration</span>
+					<span class="text-xs font-medium text-neutral-900">{formatDuration(elapsedTime)}</span>
+				</div>
+				<div class="flex items-center justify-between py-2 border-t border-neutral-100">
+					<span class="text-xs text-neutral-600">Accumulated Rainfall</span>
+					<span class="text-xs font-medium text-neutral-900">{rainfallAmount.toFixed(1)} mm</span>
+				</div>
 			{/snippet}
 		</ParameterCard>
 
-		<!-- Geotechnical Parameters -->
-		<ParameterCard title="Geotechnical Parameters" icon="fluent:cube-24-regular">
+		<!-- 4. Vegetation -->
+		<ParameterCard title="Vegetation" icon="fluent:plant-grass-20-regular">
 			{#snippet children()}
 				<ParameterSlider
-					label="Soil Depth"
-					bind:value={soilDepth}
-					min={0.5}
-					max={10}
-					step={0.1}
-					unit=" m"
-				/>
-				<ParameterSlider
-					label="Unit Weight"
-					bind:value={unitWeight}
-					min={10}
-					max={25}
-					step={0.5}
-					unit=" kN/m³"
-				/>
-				<ParameterSlider
-					label="Cohesion"
-					bind:value={cohesion}
+					label="Vegetation Cover"
+					bind:value={vegetationCover}
 					min={0}
-					max={50}
+					max={100}
 					step={1}
-					unit=" kPa"
-				/>
-				<ParameterSlider
-					label="Friction Angle"
-					bind:value={frictionAngle}
-					min={15}
-					max={45}
-					step={1}
-					unit="°"
-				/>
-				<ParameterSlider
-					label="Slope Angle"
-					bind:value={slopeAngle}
-					min={0}
-					max={90}
-					step={1}
-					unit="°"
-				/>
-				<ParameterSlider
-					label="Hydraulic Conductivity"
-					bind:value={hydraulicConductivity}
-					min={0.1}
-					max={20}
-					step={0.1}
-					unit=" ×10⁻⁶ m/s"
+					unit="%"
 				/>
 			{/snippet}
 		</ParameterCard>
 
-		<!-- Reliability Analysis -->
-		<ParameterCard title="Reliability Analysis" icon="fluent:data-bar-vertical-24-regular">
-			{#snippet children()}
-				<ParameterSlider
-					label="Coefficient of Variation"
-					bind:value={coefficientOfVariation}
-					min={0.05}
-					max={0.5}
-					step={0.01}
-					unit=""
-				/>
-			{/snippet}
-		</ParameterCard>
-
-		<!-- Landslide Visualization -->
+		<!-- Landslide Visualization (kept for 3D rendering control) -->
 		<ParameterCard title="Landslide Visualization" icon="fluent:fire-24-regular">
 			{#snippet children()}
 				<ParameterSlider
@@ -186,9 +190,5 @@
 				/>
 			{/snippet}
 		</ParameterCard>
-
-		<!-- Time Display -->
-		<TimeDisplay {elapsedTime} {rainfallAmount} />
 	</div>
 </aside>
-

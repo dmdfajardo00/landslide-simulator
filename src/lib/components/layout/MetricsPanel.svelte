@@ -17,12 +17,10 @@
 		soilDepth?: number;
 		unitWeight?: number;
 		frictionAngle?: number;
-		hydraulicConductivity?: number;
+		porosity?: number;
 		vegetationCover?: number;
-		erosion?: number;
-		soilMoisture?: number;
+		porePressure?: number;
 		rainfallIntensity?: number;
-		coefficientOfVariation?: number;
 		isRaining?: boolean;
 		isTriggered?: boolean;
 	}
@@ -38,12 +36,10 @@
 		soilDepth = 3.0,
 		unitWeight = 19.0,
 		frictionAngle = 32,
-		hydraulicConductivity = 5.0,
+		porosity = 0.35,
 		vegetationCover = 70,
-		erosion = 20,
-		soilMoisture = 30,
+		porePressure = 30,
 		rainfallIntensity = 25,
-		coefficientOfVariation = 0.15,
 		isRaining = false,
 		isTriggered = false
 	}: Props = $props();
@@ -127,16 +123,22 @@
 		const stabilityStatus = fos >= 1.5 ? 'STABLE' : fos >= 1.0 ? 'MARGINAL' : 'UNSTABLE';
 		const simulationStatus = isTriggered ? 'LANDSLIDE ACTIVE' : isRaining ? 'RAINFALL SIMULATION' : 'IDLE';
 
-		return `- Slope Angle: ${slopeAngle}°
-- Soil Depth: ${soilDepth.toFixed(1)} m
+		return `**Slope Geometry:**
+- Slope Angle: ${slopeAngle}°
+- Depth to Failure Plane: ${soilDepth.toFixed(1)} m
+
+**Soil Properties:**
 - Unit Weight: ${unitWeight.toFixed(1)} kN/m³
 - Friction Angle: ${frictionAngle}°
 - Cohesion: ${cohesion.toFixed(1)} kPa
-- Hydraulic Conductivity: ${hydraulicConductivity.toFixed(1)} ×10⁻⁶ m/s
-- Vegetation Cover: ${vegetationCover}%
-- Erosion Level: ${erosion}%
-- Soil Moisture: ${soilMoisture}%
+- Porosity: ${porosity.toFixed(2)}
+
+**Hydrological Conditions:**
+- Pore-water Pressure: ${porePressure}%
 - Rainfall Intensity: ${rainfallIntensity} mm/hr
+
+**Vegetation:**
+- Vegetation Cover: ${vegetationCover}%
 
 **Calculated Metrics:**
 - Factor of Safety (FoS): ${fos.toFixed(3)} → ${stabilityStatus}
@@ -144,8 +146,7 @@
 - Pore Pressure Ratio (ru): ${ru.toFixed(3)}
 - Displaced Volume: ${displacedParticles} m³
 
-**Simulation Status:** ${simulationStatus}
-**Coefficient of Variation:** ${coefficientOfVariation.toFixed(2)}`;
+**Simulation Status:** ${simulationStatus}`;
 	}
 
 	async function sendMessage() {

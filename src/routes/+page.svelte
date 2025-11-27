@@ -29,35 +29,38 @@
 	let elapsedTime = $state(0);
 	let rainfallAccumulated = $state(0);
 
-	// Terrain parameters (bound from Sidebar, initialized from URL params if present)
+	// Slope Geometry
 	let slopeAngle = $state(data.slopeAngle);
 	let maxElevation = $state(data.maxElevation);
-	let rainfallIntensity = $state(data.rainfallIntensity);
-	let vegetationCover = $state(data.vegetationCover);
 	let soilDepth = $state(data.soilDepth);
 
-	// Environmental parameters
-	let erosion = $state(data.erosion);
-	let soilMoisture = $state(data.soilMoisture);
-
-	// Geotechnical parameters
-	let unitWeight = $state(data.unitWeight);
+	// Soil Properties
 	let cohesionInput = $state(data.cohesion);
 	let frictionAngle = $state(data.frictionAngle);
-	let hydraulicConductivity = $state(data.hydraulicConductivity);
+	let unitWeight = $state(data.unitWeight);
+	let porosity = $state(data.porosity);
 
-	// Reliability parameter
-	let coefficientOfVariation = $state(data.coefficientOfVariation);
+	// Hydrological
+	let porePressure = $state(data.porePressure); // Initial pore pressure ratio (0-100%)
+	let rainfallIntensity = $state(data.rainfallIntensity);
+
+	// Vegetation
+	let vegetationCover = $state(data.vegetationCover);
 
 	// Landslide visualization parameters
 	let landslideSeverity = $state(50);
 	let boulderDensity = $state(15);
 
+	// Internal constants (removed from UI)
+	const DEFAULT_HYDRAULIC_CONDUCTIVITY = 5.0; // ×10⁻⁶ m/s
+	const DEFAULT_COEFFICIENT_OF_VARIATION = 0.15;
+	const REFERENCE_POROSITY = 0.35; // Reference porosity for saturation calculations
+
 	// Hydrological state for physics calculations
-	// Initial saturation based on soil moisture parameter
-	// soilMoisture (0-100%) maps to fraction of soil depth that is saturated
+	// Initial saturation based on pore pressure parameter, scaled by porosity
+	// Lower porosity = same water content fills more of available pore space
 	let hydrologicalState = $state<HydrologicalState>({
-		saturationDepth: (soilMoisture / 100) * soilDepth,
+		saturationDepth: (porePressure / 100) * soilDepth * (REFERENCE_POROSITY / porosity),
 		porePressure: 0,
 		porePressureRatio: 0,
 		infiltrationRate: 0
@@ -115,26 +118,16 @@
 	const DELTA_TIME = 0.1; // 100ms in seconds
 
 	function updatePhysics() {
-		// Calculate effective parameters based on erosion
-		// Erosion reduces effective soil depth (material removed)
-		const effectiveSoilDepth = soilDepth * (1 - (erosion / 100) * 0.40);
-
-		// Erosion increases hydraulic conductivity (loosened structure)
-		const effectiveK = hydraulicConductivity * (1 + (erosion / 100) * 0.50);
-
-		// Erosion reduces friction angle (weathered particles)
-		const effectiveFrictionAngle = frictionAngle * (1 - (erosion / 100) * 0.15);
-
 		// Update infiltration if raining
 		if (isRaining) {
 			hydrologicalState = updateInfiltration(
 				hydrologicalState,
 				{
 					rainfallIntensity,
-					hydraulicConductivity: effectiveK,
+					hydraulicConductivity: DEFAULT_HYDRAULIC_CONDUCTIVITY,
 					vegetation: vegetationCover / 100,
-					soilDepth: effectiveSoilDepth,
-					porosity: 0.35
+					soilDepth,
+					porosity
 				},
 				DELTA_TIME
 			);
@@ -144,8 +137,8 @@
 		// Apply evapotranspiration - vegetation removes water from soil
 		// ET occurs continuously (even without rain) if there's vegetation and saturation
 		if (vegetationCover > 0 && hydrologicalState.saturationDepth > 0) {
-			const currentSaturation = effectiveSoilDepth > 0
-				? hydrologicalState.saturationDepth / effectiveSoilDepth
+			const currentSaturation = soilDepth > 0
+				? hydrologicalState.saturationDepth / soilDepth
 				: 0;
 			const etRate = calculateEvapotranspiration(
 				vegetationCover / 100,
@@ -162,46 +155,40 @@
 		// Calculate pore pressure from saturation
 		const poreResult = calculatePorePressure(
 			hydrologicalState.saturationDepth,
-			effectiveSoilDepth,
+			soilDepth,
 			unitWeight
 		);
 		hydrologicalState.porePressure = poreResult.Pw;
 		hydrologicalState.porePressureRatio = poreResult.ru;
 		ru = poreResult.ru;
 
-		// Calculate effective cohesion with improved geotechnical model
-		// Uses exponential decay to model matric suction loss in unsaturated soils
-		// Includes minimum cohesion floor to maintain residual strength
+		// Calculate effective cohesion with geotechnical model
 		// Root cohesion from vegetation (0-12 kPa based on literature values for grassland/forest)
 		const rootCohesion = (vegetationCover / 100) * 12; // 0-12 kPa
-
-		// Erosion reduces soil cohesion (weathered/loosened structure)
-		const erosionCohesionFactor = 1 - (erosion / 100) * 0.5; // Up to 50% reduction
 
 		// Saturation effect (matric suction loss at high pore pressure)
 		const saturationEffect = Math.pow(ru, 1.5); // Non-linear reduction (accelerates at high ru)
 		const minCohesionRatio = 0.15; // Cohesion retains at least 15% of input (residual strength)
 		const saturationFactor = 1 - (1 - minCohesionRatio) * saturationEffect;
 
-		// Final cohesion: base soil (with erosion degradation) + root cohesion, reduced by saturation
-		const baseCohesion = cohesionInput * erosionCohesionFactor;
-		cohesion = Math.max(cohesionInput * minCohesionRatio, (baseCohesion + rootCohesion) * saturationFactor);
+		// Final cohesion: base soil + root cohesion, reduced by saturation
+		cohesion = Math.max(cohesionInput * minCohesionRatio, (cohesionInput + rootCohesion) * saturationFactor);
 
 		// Calculate Factor of Safety
 		fos = calculateFoS(
 			{
 				slopeAngle,
-				soilDepth: effectiveSoilDepth,
+				soilDepth,
 				unitWeight,
 				cohesion,
-				frictionAngle: effectiveFrictionAngle,
-				hydraulicConductivity: effectiveK
+				frictionAngle,
+				hydraulicConductivity: DEFAULT_HYDRAULIC_CONDUCTIVITY
 			},
 			hydrologicalState.porePressure
 		);
 
 		// Calculate Probability of Failure
-		pof = calculatePoF(fos, coefficientOfVariation);
+		pof = calculatePoF(fos, DEFAULT_COEFFICIENT_OF_VARIATION);
 	}
 
 	function startSimulation() {
@@ -250,7 +237,7 @@
 				effectiveSaturation,
 				landslideSeverity / 100, // Normalize to 0-1 range
 				vegetationCover / 100,   // Vegetation parameter (0-1)
-				erosion / 100            // Erosion parameter (0-1)
+				0                        // No erosion parameter
 			);
 
 			// Calculate initial terrain deformation (progress starts at 0)
@@ -325,8 +312,10 @@
 		isTriggered = false;
 		elapsedTime = 0;
 		rainfallAccumulated = 0;
+		// Porosity affects water storage capacity
+		const porosityFactor = REFERENCE_POROSITY / porosity;
 		hydrologicalState = {
-			saturationDepth: (soilMoisture / 100) * soilDepth,
+			saturationDepth: (porePressure / 100) * soilDepth * porosityFactor,
 			porePressure: 0,
 			porePressureRatio: 0,
 			infiltrationRate: 0
@@ -337,31 +326,29 @@
 		scarpDepth = null;
 		depositionDepth = null;
 
-		// Recalculate initial state with effective parameters
+		// Recalculate initial state
 		ru = 0;
 		const rootCohesion = (vegetationCover / 100) * 12; // 0-12 kPa
-		const erosionCohesionFactor = 1 - (erosion / 100) * 0.5;
-		cohesion = cohesionInput * erosionCohesionFactor + rootCohesion;
-		const effectiveSoilDepth = soilDepth * (1 - (erosion / 100) * 0.40);
-		const effectiveK = hydraulicConductivity * (1 + (erosion / 100) * 0.50);
-		const effectiveFrictionAngle = frictionAngle * (1 - (erosion / 100) * 0.15);
+		cohesion = cohesionInput + rootCohesion;
 		fos = calculateFoS(
-			{ slopeAngle, soilDepth: effectiveSoilDepth, unitWeight, cohesion, frictionAngle: effectiveFrictionAngle, hydraulicConductivity: effectiveK },
+			{ slopeAngle, soilDepth, unitWeight, cohesion, frictionAngle, hydraulicConductivity: DEFAULT_HYDRAULIC_CONDUCTIVITY },
 			0
 		);
-		pof = calculatePoF(fos, coefficientOfVariation);
+		pof = calculatePoF(fos, DEFAULT_COEFFICIENT_OF_VARIATION);
 		displacedParticles = 0;
 	}
 
 	// Initialize physics on mount and when parameters change
 	$effect(() => {
 		// Recalculate when any geotechnical or environmental parameter changes
-		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, coefficientOfVariation, soilMoisture, vegetationCover, erosion, hydraulicConductivity];
+		const _ = [slopeAngle, soilDepth, unitWeight, cohesionInput, frictionAngle, porePressure, porosity, vegetationCover];
 		// Use untrack to prevent state modifications from re-triggering this effect
 		untrack(() => {
 			if (!isRaining && !isTriggered) {
-				// Reset saturation depth when moisture changes
-				hydrologicalState.saturationDepth = (soilMoisture / 100) * soilDepth;
+				// Reset saturation depth when pore pressure or porosity changes
+				// Porosity affects water storage capacity: lower porosity = same water fills more pore space
+				const porosityFactor = REFERENCE_POROSITY / porosity;
+				hydrologicalState.saturationDepth = (porePressure / 100) * soilDepth * porosityFactor;
 				updatePhysics();
 			}
 		});
@@ -386,19 +373,16 @@
 	<!-- Left Sidebar - Full Height -->
 	<Sidebar
 		bind:slopeAngle
-		bind:maxElevation
-		bind:elapsedTime
-		bind:rainfallAmount={rainfallAccumulated}
-		bind:rainfallIntensity
-		bind:vegetationCover
 		bind:soilDepth
-		bind:erosion
-		bind:soilMoisture
-		bind:unitWeight
 		bind:cohesion={cohesionInput}
 		bind:frictionAngle
-		bind:hydraulicConductivity
-		bind:coefficientOfVariation
+		bind:unitWeight
+		bind:porosity
+		bind:porePressure
+		bind:rainfallIntensity
+		bind:elapsedTime
+		bind:rainfallAmount={rainfallAccumulated}
+		bind:vegetationCover
 		bind:landslideSeverity
 		bind:boulderDensity
 	/>
@@ -436,12 +420,10 @@
 			{soilDepth}
 			{unitWeight}
 			{frictionAngle}
-			{hydraulicConductivity}
+			{porosity}
 			{vegetationCover}
-			{erosion}
-			{soilMoisture}
+			{porePressure}
 			{rainfallIntensity}
-			{coefficientOfVariation}
 			{isRaining}
 			{isTriggered}
 		/>

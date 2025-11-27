@@ -12,21 +12,19 @@ export const load: PageLoad = ({ url }) => {
 	return {
 		// Check if params were passed from map
 		fromMap: params.has('slopeAngle'),
-		// Terrain parameters
+		// Slope Geometry
 		slopeAngle: getFloat('slopeAngle', 30),
 		maxElevation: getFloat('maxElevation', 50),
-		// Environmental parameters
-		vegetationCover: getFloat('vegetationCover', 70),
-		erosion: getFloat('erosion', 20),
-		soilMoisture: getFloat('soilMoisture', 30),
-		rainfallIntensity: getFloat('rainfallIntensity', 25),
-		// Geotechnical parameters
 		soilDepth: getFloat('soilDepth', 3.0),
-		unitWeight: getFloat('unitWeight', 19.0),
+		// Soil Properties
 		cohesion: getFloat('cohesion', 15),
 		frictionAngle: getFloat('frictionAngle', 32),
-		hydraulicConductivity: getFloat('hydraulicConductivity', 5.0),
-		// Reliability
-		coefficientOfVariation: getFloat('coefficientOfVariation', 0.15)
+		unitWeight: getFloat('unitWeight', 19.0),
+		porosity: getFloat('porosity', 0.35),
+		// Hydrological
+		porePressure: getFloat('porePressure', 30),
+		rainfallIntensity: getFloat('rainfallIntensity', 25),
+		// Vegetation
+		vegetationCover: getFloat('vegetationCover', 70)
 	};
 };
