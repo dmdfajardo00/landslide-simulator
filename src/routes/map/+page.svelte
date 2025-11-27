@@ -6,8 +6,8 @@
 
 	let selectedFeature = $state<MapGeoJSONFeature | null>(null);
 	let hoveredFeature = $state<MapGeoJSONFeature | null>(null);
-	// Start with all hazard levels checked/visible
-	let activeFilters = $state<LandslideHazardLevel[]>([1.0, 2.0, 3.0]);
+	// Start with all hazard levels checked/visible (integers match PMTiles data)
+	let activeFilters = $state<LandslideHazardLevel[]>([1, 2, 3]);
 	let mapViewRef: MapView | null = $state(null);
 	let isLocating = $state(false);
 
@@ -17,10 +17,6 @@
 
 	function handleFeatureHover(feature: MapGeoJSONFeature | null) {
 		hoveredFeature = feature;
-	}
-
-	function handleFilterChange(filters: LandslideHazardLevel[]) {
-		activeFilters = filters;
 	}
 
 	function handleLoadInSimulator(params: SimulatorParams) {
@@ -65,7 +61,6 @@
 		{selectedFeature}
 		{hoveredFeature}
 		bind:activeFilters
-		onFilterChange={handleFilterChange}
 		onLoadInSimulator={handleLoadInSimulator}
 		onResetView={handleResetView}
 		onGoToLocation={handleGoToLocation}

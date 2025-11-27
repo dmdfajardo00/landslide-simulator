@@ -3,6 +3,7 @@
 	import Terrain from '$lib/components/viewport/Terrain.svelte';
 	import Trees from '$lib/components/viewport/Trees.svelte';
 	import Rain from '$lib/components/viewport/Rain.svelte';
+	import RainAudio from '$lib/components/viewport/RainAudio.svelte';
 	import Debris from '$lib/components/viewport/Debris.svelte';
 	import DustCloud from '$lib/components/viewport/DustCloud.svelte';
 	import CameraController from '$lib/components/viewport/CameraController.svelte';
@@ -124,6 +125,12 @@
 			/>
 		{/if}
 	</Canvas>
+
+	<!-- Rain Audio (outside Canvas - audio-only component) -->
+	<RainAudio
+		{isRaining}
+		{rainfallIntensity}
+	/>
 
 	<!-- Overlay info -->
 	<div class="absolute bottom-4 left-4 text-xs text-neutral-400 bg-neutral-900/80 backdrop-blur-sm px-3 py-2 rounded">

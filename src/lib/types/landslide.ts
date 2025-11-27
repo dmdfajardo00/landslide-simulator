@@ -12,11 +12,11 @@ import type { GeotechnicalParams } from '$lib/simulation/physics';
 
 /**
  * Landslide hazard level from GeoJSON LH property
- * 1.0 = Low hazard
- * 2.0 = Moderate hazard
- * 3.0 = High hazard
+ * 1 = Low hazard
+ * 2 = Moderate hazard
+ * 3 = High hazard
  */
-export type LandslideHazardLevel = 1.0 | 2.0 | 3.0;
+export type LandslideHazardLevel = 1 | 2 | 3;
 
 /**
  * Human-readable hazard level labels

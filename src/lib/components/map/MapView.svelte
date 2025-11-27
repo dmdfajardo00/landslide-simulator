@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import type { Map as MapLibreMap, MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl';
+	import type {
+		Map as MapLibreMap,
+		MapLayerMouseEvent,
+		MapMouseEvent,
+		MapGeoJSONFeature,
+		FilterSpecification
+	} from 'maplibre-gl';
 	import * as pmtiles from 'pmtiles';
 	import {
 		osmBaseStyle,
@@ -31,16 +37,30 @@
 	}: Props = $props();
 
 	let mapContainer: HTMLDivElement;
-	let map: MapLibreMap | null = null;
-	let hoveredFeatureId: string | number | null = null;
+	let mapInstance: MapLibreMap | null = null;
+	let mapReady = $state(false);
+	let hoveredFeatureId = $state<string | number | null>(null);
 	let isMapLoaded = $state(false);
 	let isLoading = $state(true);
 	let errorMessage = $state<string | null>(null);
 	let userMarker: any = null;
 	let isLocating = $state(false);
+	const HAZARD_PROP = 'LH';
 
-	const PMTILES_URL = '/tiles/cebu-hazards.pmtiles';
+	// Use CDN for optimized tile loading
+	const PMTILES_URL = 'https://qmijvcildymgqfjbhalm.supabase.co/storage/v1/object/public/storage/cebu-hazards.pmtiles';
 	const SOURCE_LAYER = 'hazards';
+
+	function buildHazardFilter(levels: LandslideHazardLevel[]): FilterSpecification {
+		if (!levels.length) {
+			// Always-false filter to hide all hazard features
+			return ['==', ['literal', 1], 0];
+		}
+
+		// Convert to integers for matching PMTiles data (LH values are 1, 2, 3)
+		const allowed = levels.map((level) => Math.round(Number(level)));
+		return ['in', ['get', HAZARD_PROP], ['literal', allowed]];
+	}
 
 	onMount(async () => {
 		try {
@@ -62,15 +82,16 @@
 			maplibregl.addProtocol('pmtiles', protocol.tile);
 
 			// Initialize map
-			map = new maplibregl.Map({
+			const map = new maplibregl.Map({
 				container: mapContainer,
 				style: osmBaseStyle,
 				center: [INITIAL_VIEW.center.lng, INITIAL_VIEW.center.lat],
 				zoom: INITIAL_VIEW.zoom,
 				minZoom: ZOOM_LIMITS.min,
-				maxZoom: ZOOM_LIMITS.max,
-				attributionControl: true
+				maxZoom: ZOOM_LIMITS.max
 			});
+
+			mapInstance = map;
 
 			// Add navigation controls
 			map.addControl(new maplibregl.NavigationControl(), 'top-right');
@@ -82,31 +103,25 @@
 			});
 
 			map.on('load', () => {
-				if (!map) return;
+				if (!mapInstance) return;
 
 				try {
-					// Add PMTiles source
-					const pmtilesUrl = `pmtiles://${window.location.origin}${PMTILES_URL}`;
+					// Add PMTiles source using CDN URL
+					const pmtilesUrl = `pmtiles://${PMTILES_URL}`;
 
-					map.addSource(MAP_SOURCE_IDS.HAZARD_TILES, {
+					mapInstance.addSource(MAP_SOURCE_IDS.HAZARD_TILES, {
 						type: 'vector',
 						url: pmtilesUrl
 					});
 
 					// Add hazard fill layer
-					map.addLayer({
-						...hazardFillLayer,
-						'source-layer': SOURCE_LAYER
-					});
+					mapInstance.addLayer(hazardFillLayer);
 
 					// Add hazard outline layer
-					map.addLayer({
-						...hazardOutlineLayer,
-						'source-layer': SOURCE_LAYER
-					});
+					mapInstance.addLayer(hazardOutlineLayer);
 
 					// Add hover state layer
-					map.addLayer({
+					mapInstance.addLayer({
 						id: 'hazard-hover',
 						type: 'fill',
 						source: MAP_SOURCE_IDS.HAZARD_TILES,
@@ -119,7 +134,7 @@
 					});
 
 					// Add selected state layer
-					map.addLayer({
+					mapInstance.addLayer({
 						id: MAP_LAYER_IDS.HAZARD_SELECTED,
 						type: 'line',
 						source: MAP_SOURCE_IDS.HAZARD_TILES,
@@ -133,9 +148,10 @@
 					});
 
 					// Fit to Cebu bounds
-					map.fitBounds(CEBU_BOUNDS, { padding: 50, duration: 1000 });
+					mapInstance.fitBounds(CEBU_BOUNDS, { padding: 50, duration: 1000 });
 
 					isMapLoaded = true;
+					mapReady = true;
 					isLoading = false;
 				} catch (err) {
 					console.error('Error adding layers:', err);
@@ -145,49 +161,86 @@
 			});
 
 			// Mouse move event for hover
-			map.on('mousemove', MAP_LAYER_IDS.HAZARD_FILL, (e: MapMouseEvent) => {
-				if (!map || !e.features?.length) return;
+			map.on('mousemove', MAP_LAYER_IDS.HAZARD_FILL, (e: MapLayerMouseEvent) => {
+				if (!mapInstance || !e.features?.length) return;
 
-				map.getCanvas().style.cursor = 'pointer';
+				mapInstance.getCanvas().style.cursor = 'pointer';
 
 				const feature = e.features[0];
 				if (hoveredFeatureId !== feature.id) {
 					if (hoveredFeatureId !== null) {
-						map.setFilter('hazard-hover', ['==', ['id'], '']);
+						mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
 					}
 					hoveredFeatureId = feature.id ?? null;
-					map.setFilter('hazard-hover', ['==', ['id'], hoveredFeatureId]);
+					mapInstance.setFilter('hazard-hover', ['==', ['id'], hoveredFeatureId]);
 					onFeatureHover?.(feature);
 				}
 			});
 
 			// Mouse leave event
 			map.on('mouseleave', MAP_LAYER_IDS.HAZARD_FILL, () => {
-				if (!map) return;
-				map.getCanvas().style.cursor = '';
+				if (!mapInstance) return;
+				mapInstance.getCanvas().style.cursor = '';
 				if (hoveredFeatureId !== null) {
-					map.setFilter('hazard-hover', ['==', ['id'], '']);
+					mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
+					hoveredFeatureId = null;
+					onFeatureHover?.(null);
+				}
+			});
+
+			// Global mouse move to clear hover when not over any feature
+			map.on('mousemove', (e: MapMouseEvent) => {
+				if (!mapInstance || hoveredFeatureId === null) return;
+
+				// Check if hazard layer exists before querying
+				const layerExists = mapInstance.getLayer(MAP_LAYER_IDS.HAZARD_FILL);
+				let features: MapGeoJSONFeature[] = [];
+
+				if (layerExists) {
+					try {
+						features = mapInstance.queryRenderedFeatures(e.point, {
+							layers: [MAP_LAYER_IDS.HAZARD_FILL]
+						});
+					} catch {
+						// Layer might not be queryable, treat as no features
+						features = [];
+					}
+				}
+
+				// If cursor is not over any hazard feature, clear hover
+				if (!features.length) {
+					mapInstance.getCanvas().style.cursor = '';
+					mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
 					hoveredFeatureId = null;
 					onFeatureHover?.(null);
 				}
 			});
 
 			// Click event on features
-			map.on('click', MAP_LAYER_IDS.HAZARD_FILL, (e: MapMouseEvent) => {
-				if (!map || !e.features?.length) return;
+			map.on('click', MAP_LAYER_IDS.HAZARD_FILL, (e: MapLayerMouseEvent) => {
+				if (!mapInstance || !e.features?.length) return;
 				const feature = e.features[0];
 				onFeatureClick?.(feature);
 			});
 
 			// Click elsewhere to deselect
 			map.on('click', (e: MapMouseEvent) => {
-				if (!map) return;
-				const features = map.queryRenderedFeatures(e.point, {
+				if (!mapInstance) return;
+				const features = mapInstance.queryRenderedFeatures(e.point, {
 					layers: [MAP_LAYER_IDS.HAZARD_FILL]
 				});
 				if (!features?.length) {
 					onFeatureClick?.(null);
 				}
+			});
+
+			// Clear hover state when leaving the map canvas entirely
+			map.on('mouseout', () => {
+				if (!mapInstance || hoveredFeatureId === null) return;
+				mapInstance.getCanvas().style.cursor = '';
+				mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
+				hoveredFeatureId = null;
+				onFeatureHover?.(null);
 			});
 		} catch (err) {
 			console.error('Error initializing map:', err);
@@ -197,50 +250,62 @@
 	});
 
 	onDestroy(() => {
-		map?.remove();
+		mapInstance?.remove();
 	});
 
-	// Update selected feature highlight
+	// Update hazard level filter and layer visibility
+	// Using mapReady ($state) ensures this effect is properly reactive
 	$effect(() => {
-		if (map && isMapLoaded) {
-			if (selectedFeatureId !== null) {
-				map.setFilter(MAP_LAYER_IDS.HAZARD_SELECTED, ['==', ['id'], selectedFeatureId]);
-			} else {
-				map.setFilter(MAP_LAYER_IDS.HAZARD_SELECTED, ['==', ['id'], '']);
+		// Access reactive dependencies first to ensure tracking
+		const ready = mapReady;
+		const filters = hazardFilter;
+
+		if (!ready || !mapInstance || !Array.isArray(filters)) return;
+
+		const filterExpr = buildHazardFilter(filters);
+		const visibility = filters.length === 0 ? 'none' : 'visible';
+
+		// If everything is hidden, also clear hover state
+		if (filters.length === 0 && hoveredFeatureId !== null) {
+			mapInstance.setFilter('hazard-hover', ['==', ['id'], '']);
+			hoveredFeatureId = null;
+			onFeatureHover?.(null);
+		}
+
+		for (const layerId of [MAP_LAYER_IDS.HAZARD_FILL, MAP_LAYER_IDS.HAZARD_OUTLINE]) {
+			if (mapInstance.getLayer(layerId)) {
+				mapInstance.setLayoutProperty(layerId, 'visibility', visibility);
+				mapInstance.setFilter(layerId, filterExpr);
 			}
 		}
-	});
 
-	// Update hazard level filter - checked = visible, unchecked = hidden
-	$effect(() => {
-		if (map && isMapLoaded) {
-			// hazardFilter contains the CHECKED levels that should be VISIBLE
-			if (!hazardFilter || hazardFilter.length === 0) {
-				// No levels checked = hide all hazard layers
-				map.setFilter(MAP_LAYER_IDS.HAZARD_FILL, ['==', ['get', 'LH'], -999]);
-				map.setFilter(MAP_LAYER_IDS.HAZARD_OUTLINE, ['==', ['get', 'LH'], -999]);
-				map.setFilter('hazard-hover', ['==', ['get', 'LH'], -999]);
-			} else if (hazardFilter.length === 3) {
-				// All levels checked = show all (no filter)
-				map.setFilter(MAP_LAYER_IDS.HAZARD_FILL, null);
-				map.setFilter(MAP_LAYER_IDS.HAZARD_OUTLINE, null);
-				map.setFilter('hazard-hover', ['==', ['id'], '']);
-			} else {
-				// Some levels checked = show only those
-				const filterExpr: any = ['match', ['get', 'LH'], hazardFilter, true, false];
-				map.setFilter(MAP_LAYER_IDS.HAZARD_FILL, filterExpr);
-				map.setFilter(MAP_LAYER_IDS.HAZARD_OUTLINE, filterExpr);
-				map.setFilter('hazard-hover', ['all', filterExpr, ['==', ['id'], '']]);
-			}
+		if (mapInstance.getLayer('hazard-hover')) {
+			mapInstance.setLayoutProperty('hazard-hover', 'visibility', visibility);
+			const hoverFilter = [
+				'all',
+				filterExpr as unknown,
+				['==', ['id'], hoveredFeatureId ?? '']
+			] as unknown as FilterSpecification;
+			mapInstance.setFilter('hazard-hover', hoverFilter);
+		}
+
+		if (mapInstance.getLayer(MAP_LAYER_IDS.HAZARD_SELECTED)) {
+			const selectedFilter =
+				selectedFeatureId !== null
+					? (['all', filterExpr as unknown, ['==', ['id'], selectedFeatureId]] as unknown as FilterSpecification)
+					: (['==', ['literal', 1], 0] as FilterSpecification);
+
+			mapInstance.setLayoutProperty(MAP_LAYER_IDS.HAZARD_SELECTED, 'visibility', visibility);
+			mapInstance.setFilter(MAP_LAYER_IDS.HAZARD_SELECTED, selectedFilter);
 		}
 	});
 
 	export function fitToBounds() {
-		map?.fitBounds(CEBU_BOUNDS, { padding: 50, duration: 500 });
+		mapInstance?.fitBounds(CEBU_BOUNDS, { padding: 50, duration: 500 });
 	}
 
 	export async function goToCurrentLocation(): Promise<boolean> {
-		if (!map || !isMapLoaded) return false;
+		if (!mapInstance || !isMapLoaded) return false;
 
 		isLocating = true;
 
@@ -278,10 +343,10 @@
 					// Add marker to map
 					userMarker = new maplibregl.Marker({ element: markerEl })
 						.setLngLat([longitude, latitude])
-						.addTo(map!);
+						.addTo(mapInstance!);
 
 					// Fly to location
-					map!.flyTo({
+					mapInstance!.flyTo({
 						center: [longitude, latitude],
 						zoom: 14,
 						duration: 1500
