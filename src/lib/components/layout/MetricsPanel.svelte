@@ -602,8 +602,8 @@
 					<div class="prose prose-sm max-w-none">
 						<h2 class="text-lg font-bold text-neutral-900 mb-4">Simulation Information</h2>
 						<div class="space-y-4 text-neutral-700 text-sm">
-							<h3 class="font-semibold text-neutral-900">Physics Engine</h3>
-							<p>This simulator uses <strong>Rapier3D</strong> physics engine for real-time rigid body dynamics and particle systems.</p>
+							<h3 class="font-semibold text-neutral-900">Rendering & Physics</h3>
+							<p>This simulator uses <strong>Three.js via Threlte</strong> for 3D visualization with custom physics calculations for debris particles and procedural terrain deformation.</p>
 							<h3 class="font-semibold text-neutral-900 mt-4">Real-time Calculations</h3>
 							<ul class="list-disc list-inside space-y-2">
 								<li>Factor of Safety updates every simulation step</li>
@@ -626,38 +626,38 @@
 						<h2 class="text-lg font-bold text-neutral-900 mb-4">Key Concepts</h2>
 						<div class="space-y-4 text-neutral-700 text-sm">
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Factor of Safety (FoS):</strong> Ratio of shear strength to shear stress. FoS &gt; 1.5 indicates stability</li>
-								<li><strong>Pore Pressure:</strong> Water pressure within soil affects shear strength and failure</li>
-								<li><strong>Slope Angle:</strong> Steeper slopes are more susceptible to failure</li>
-								<li><strong>Vegetation:</strong> Root systems increase soil cohesion and stability</li>
+								<li><strong>Factor of Safety (FoS):</strong> Ratio of resisting forces to driving forces using Infinite Slope analysis. FoS ≥ 1.5 indicates stability; FoS &lt; 1.0 indicates failure</li>
+								<li><strong>Pore Pressure Ratio (rᵤ):</strong> Ratio of pore water pressure to total stress; reduces effective stress and shear strength</li>
+								<li><strong>Slope Angle:</strong> Steeper slopes increase driving forces and are more susceptible to failure</li>
+								<li><strong>Vegetation:</strong> Root systems increase soil cohesion; canopy intercepts rainfall</li>
+								<li><strong>Effective Cohesion (c'):</strong> Soil cohesion accounting for vegetation roots and saturation effects; minimum 15% of base cohesion</li>
 							</ul>
 
 							<h3 class="font-semibold text-neutral-900 mt-6">Geotechnical Parameters</h3>
 
 							<h4 class="font-medium text-neutral-800 mt-4">Slope Geometry</h4>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Slope Angle (θ):</strong> 15-75° - Controls gravitational component along slope</li>
-								<li><strong>Soil Depth (H):</strong> 0.8-5m - Thickness of potentially failing soil layer</li>
+								<li><strong>Slope Angle (β):</strong> 0-90° - Controls gravitational component along slope</li>
+								<li><strong>Slope Height (z):</strong> 0.8-5 m - Vertical height of potentially failing soil layer</li>
 							</ul>
 
 							<h4 class="font-medium text-neutral-800 mt-4">Soil Properties</h4>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Cohesion (c):</strong> 0-50 kPa - Internal soil strength independent of stress</li>
-								<li><strong>Friction Angle (φ):</strong> 15-45° - Angle of internal friction</li>
+								<li><strong>Cohesion (c'):</strong> 0-50 kPa - Effective cohesion; internal soil strength</li>
+								<li><strong>Friction Angle (φ'):</strong> 15-45° - Effective angle of internal friction</li>
 								<li><strong>Unit Weight (γ):</strong> 10-25 kN/m³ - Weight per unit volume of soil</li>
 								<li><strong>Porosity (n):</strong> 0.1-0.6 - Fraction of soil volume that is void space</li>
 							</ul>
 
 							<h4 class="font-medium text-neutral-800 mt-4">Hydrological Factors</h4>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Rainfall Intensity (I):</strong> 0-100 mm/hr - Rate of water input</li>
-								<li><strong>Pore Pressure (u):</strong> Water pressure in soil pores reducing effective stress</li>
-								<li><strong>Saturation Depth:</strong> Depth of water-saturated soil layer</li>
+								<li><strong>Pore-water Pressure (u):</strong> 0-100 kPa - Water pressure in soil pores reducing effective stress</li>
+								<li><strong>Rainfall Intensity (I):</strong> 0-100 mm/hr - Rate of water input to slope</li>
 							</ul>
 
 							<h4 class="font-medium text-neutral-800 mt-4">Vegetation</h4>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Coverage (%):</strong> 0-100% - Density of plant cover on slope</li>
+								<li><strong>Vegetation Cover (%):</strong> 0-100% - Density of plant cover on slope</li>
 								<li><strong>Root Strength:</strong> Contributes up to 12 kPa additional cohesion at 100% coverage</li>
 								<li><strong>Interception:</strong> Vegetation intercepts up to 30% of rainfall</li>
 							</ul>
@@ -1346,7 +1346,7 @@
 						<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
 							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Formula</p>
 							<p class="font-mono text-sm text-neutral-900">rᵤ = u / (γ × z)</p>
-							<p class="font-mono text-xs text-neutral-600 mt-1">where u = γᵥ × hᵥ (pore water pressure)</p>
+							<p class="font-mono text-xs text-neutral-600 mt-1">where u = γw × hw (pore water pressure)</p>
 						</div>
 
 						<!-- Input Parameters -->
@@ -1354,11 +1354,11 @@
 							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Input Parameters</p>
 							<div class="grid grid-cols-2 gap-2 text-xs">
 								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
-									<span class="text-neutral-500">Water Unit Weight (γᵥ)</span>
+									<span class="text-neutral-500">Water Unit Weight (γw)</span>
 									<span class="float-right font-mono font-semibold text-neutral-900">{calc.waterUnitWeight.toFixed(2)} kN/m³</span>
 								</div>
 								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
-									<span class="text-neutral-500">Saturation Depth (hᵥ)</span>
+									<span class="text-neutral-500">Saturation Depth (hw)</span>
 									<span class="float-right font-mono font-semibold text-neutral-900">{calc.saturationDepth.toFixed(3)} m</span>
 								</div>
 								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
@@ -1378,7 +1378,7 @@
 							<div class="space-y-2 text-xs">
 								<div class="bg-blue-50 rounded p-3 border border-blue-100">
 									<p class="font-semibold text-blue-900">Step 1: Pore Water Pressure (u)</p>
-									<p class="font-mono text-blue-800 mt-1">u = γᵥ × hᵥ</p>
+									<p class="font-mono text-blue-800 mt-1">u = γw × hw</p>
 									<p class="font-mono text-blue-700 mt-1">u = {calc.waterUnitWeight.toFixed(2)} × {calc.saturationDepth.toFixed(3)}</p>
 									<p class="font-mono font-semibold text-blue-900 mt-1">u = {calc.Pw.toFixed(3)} kPa</p>
 								</div>
@@ -1421,8 +1421,8 @@
 						<!-- Formula -->
 						<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
 							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Formula</p>
-							<p class="font-mono text-sm text-neutral-900">c' = max(c₀×0.15, (c₀ + c_root) × Sᶠ)</p>
-							<p class="font-mono text-xs text-neutral-600 mt-1">where Sᶠ = 1 - 0.85 × rᵤ^1.5 (saturation factor)</p>
+							<p class="font-mono text-sm text-neutral-900">c' = max(c₀ × 0.15, (c₀ + c_root) × Sf)</p>
+							<p class="font-mono text-xs text-neutral-600 mt-1">where Sf = 1 - 0.85 × rᵤ^1.5 (saturation factor)</p>
 							<p class="font-mono text-xs text-neutral-600">and c_root = V × 12 kPa (root cohesion)</p>
 						</div>
 
@@ -1466,14 +1466,14 @@
 									<p class="font-mono font-semibold text-blue-900 mt-1">Saturation Effect = {calc.saturationEffect.toFixed(4)}</p>
 								</div>
 								<div class="bg-blue-50 rounded p-3 border border-blue-100">
-									<p class="font-semibold text-blue-900">Step 3: Saturation Factor (Sᶠ)</p>
-									<p class="font-mono text-blue-800 mt-1">Sᶠ = 1 - (1 - 0.15) × saturation effect</p>
-									<p class="font-mono text-blue-700 mt-1">Sᶠ = 1 - 0.85 × {calc.saturationEffect.toFixed(4)}</p>
-									<p class="font-mono font-semibold text-blue-900 mt-1">Sᶠ = {calc.saturationFactor.toFixed(4)}</p>
+									<p class="font-semibold text-blue-900">Step 3: Saturation Factor (Sf)</p>
+									<p class="font-mono text-blue-800 mt-1">Sf = 1 - 0.85 × rᵤ^1.5</p>
+									<p class="font-mono text-blue-700 mt-1">Sf = 1 - 0.85 × {calc.saturationEffect.toFixed(4)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">Sf = {calc.saturationFactor.toFixed(4)}</p>
 								</div>
 								<div class="bg-blue-50 rounded p-3 border border-blue-100">
 									<p class="font-semibold text-blue-900">Step 4: Raw Effective Cohesion</p>
-									<p class="font-mono text-blue-800 mt-1">c'_raw = (c₀ + c_root) × Sᶠ</p>
+									<p class="font-mono text-blue-800 mt-1">c'_raw = (c₀ + c_root) × Sf</p>
 									<p class="font-mono text-blue-700 mt-1">c'_raw = ({baseCohesion.toFixed(1)} + {calc.rootCohesion.toFixed(2)}) × {calc.saturationFactor.toFixed(4)}</p>
 									<p class="font-mono font-semibold text-blue-900 mt-1">c'_raw = {calc.rawCohesion.toFixed(3)} kPa</p>
 								</div>
