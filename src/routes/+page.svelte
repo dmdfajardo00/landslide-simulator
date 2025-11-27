@@ -44,6 +44,10 @@
 	// Reliability parameter
 	let coefficientOfVariation = $state(0.15);
 
+	// Landslide visualization parameters
+	let landslideSeverity = $state(50);
+	let boulderDensity = $state(15);
+
 	// Hydrological state for physics calculations
 	let hydrologicalState = $state<HydrologicalState>({
 		saturationDepth: 0,
@@ -327,6 +331,8 @@
 		bind:frictionAngle
 		bind:hydraulicConductivity
 		bind:coefficientOfVariation
+		bind:landslideSeverity
+		bind:boulderDensity
 	/>
 
 	<!-- Main Content Area -->
@@ -347,6 +353,8 @@
 			{deformationVersion}
 			failureZone={landslideState.failureZone}
 			landslideProgress={landslideState.progress}
+			{landslideSeverity}
+			{boulderDensity}
 		/>
 
 		<!-- Right Metrics Panel -->

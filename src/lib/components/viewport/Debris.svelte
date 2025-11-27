@@ -14,6 +14,8 @@
 		worldScale?: number;
 		maxElevation?: number;
 		progress?: number;
+		severity?: number; // 1-100, controls spawn rate and particle behavior
+		boulderDensity?: number; // 0-50, controls boulder count and probability
 	}
 
 	let {
@@ -24,15 +26,21 @@
 		height = 128,
 		worldScale = 100,
 		maxElevation = 50,
-		progress = 0
+		progress = 0,
+		severity = 50,
+		boulderDensity = 15
 	}: Props = $props();
 
 	// Physics constants
 	const GRAVITY = 30; // World units per second squared
 	const FRICTION = 0.6; // Ground friction coefficient
 	const RESTITUTION = 0.3; // Bounce factor
-	const MAX_PARTICLES = 150; // Reduced for performance
-	const MAX_BOULDERS = 15; // Reduced for performance
+
+	// Derive max counts from parameters
+	const BASE_MAX_PARTICLES = 150;
+	const BASE_MAX_BOULDERS = 50;
+	let maxParticles = $derived(Math.round(BASE_MAX_PARTICLES * (severity / 50)));
+	let maxBoulders = $derived(Math.min(boulderDensity * 2, BASE_MAX_BOULDERS));
 
 	// Debris colors - realistic dark brown rock tones
 	const ROCK_COLOR = new THREE.Color(0x7a6352); // Medium brown
@@ -96,14 +104,14 @@
 	// Initialize meshes once
 	function initializeMeshes() {
 		if (!rockMesh) {
-			rockMesh = new THREE.InstancedMesh(rockGeometry, rockMaterial, MAX_PARTICLES);
+			rockMesh = new THREE.InstancedMesh(rockGeometry, rockMaterial, BASE_MAX_PARTICLES);
 			rockMesh.count = 0;
 			rockMesh.castShadow = true;
 			rockMesh.receiveShadow = true;
 			rockMesh.frustumCulled = false; // Prevent disappearing at camera angles
 		}
 		if (!soilMesh) {
-			soilMesh = new THREE.InstancedMesh(soilGeometry, soilMaterial, MAX_PARTICLES);
+			soilMesh = new THREE.InstancedMesh(soilGeometry, soilMaterial, BASE_MAX_PARTICLES);
 			soilMesh.count = 0;
 			soilMesh.castShadow = true;
 			soilMesh.frustumCulled = false; // Prevent disappearing at camera angles
@@ -111,7 +119,7 @@
 		// Initialize boulder meshes for each color variation
 		if (boulderMeshes.length === 0) {
 			boulderMeshes = boulderMaterials.map(material => {
-				const mesh = new THREE.InstancedMesh(boulderGeometry, material, MAX_BOULDERS);
+				const mesh = new THREE.InstancedMesh(boulderGeometry, material, BASE_MAX_BOULDERS);
 				mesh.count = 0;
 				mesh.castShadow = true;
 				mesh.receiveShadow = true;
@@ -137,17 +145,18 @@
 
 	// Calculate spawn rate based on phase - optimized for performance
 	function getSpawnRate(): number {
+		const severityMultiplier = severity / 50; // 0.02-2.0 range
 		if (progress < 0.2) {
 			// Initiating phase: sparse initial debris
-			return 5;
+			return 5 * severityMultiplier;
 		} else if (progress < 0.7) {
 			// Flowing phase: moderate spawn rate
 			const phaseProgress = (progress - 0.2) / 0.5;
-			return 10 + phaseProgress * 10; // 10-20 particles/sec
+			return (10 + phaseProgress * 15) * severityMultiplier;
 		} else if (progress < 1.0) {
 			// Depositing phase: decreasing spawn rate
 			const phaseProgress = (progress - 0.7) / 0.3;
-			return 10 - phaseProgress * 7; // 10 → 3 particles/sec
+			return (12 - phaseProgress * 9) * severityMultiplier;
 		}
 		// Complete phase: no spawning
 		return 0;
@@ -155,7 +164,7 @@
 
 	// Spawn a new particle in the failure zone
 	function spawnParticle() {
-		if (!failureZone || particles.length >= MAX_PARTICLES) return;
+		if (!failureZone || particles.length >= maxParticles) return;
 
 		const { startX, endX, headZ, toeZ, length: slideLength } = failureZone;
 
@@ -170,15 +179,15 @@
 		const z = spawnZ + (Math.random() - 0.5) * spawnRange;
 		const y = getTerrainHeight(x, z) + 0.5;
 
-		// Calculate boulder spawn probability - REALISTIC (rare large rocks)
-		// Boulders are rare - only 8-12% of debris
+		// Boulder probability scales with boulderDensity (0-50 maps to 0-25% probability)
+		const baseBoulderProb = boulderDensity / 200; // 0-0.25 range
 		let boulderProbability = 0;
 		if (progress >= 0.1 && progress < 0.3) {
-			boulderProbability = 0.08;
+			boulderProbability = baseBoulderProb * 0.7;
 		} else if (progress >= 0.3 && progress < 0.7) {
-			boulderProbability = 0.12; // Peak: 12% boulders
+			boulderProbability = baseBoulderProb;
 		} else if (progress >= 0.7) {
-			boulderProbability = 0.08;
+			boulderProbability = baseBoulderProb * 0.7;
 		}
 
 		const rand = Math.random();
@@ -202,9 +211,10 @@
 			baseSize = 0.25 + Math.random() * 0.25;
 		}
 
-		// All particles have good momentum
-		const velocityMultiplier = type === 'boulder' ? 1.8 : 1.2;
-		const verticalMultiplier = type === 'boulder' ? 2.0 : 1.5;
+		// Velocity scales with severity
+		const severityVelocityBoost = 0.8 + (severity / 100) * 0.4; // 0.8-1.2 range
+		const velocityMultiplier = (type === 'boulder' ? 1.8 : 1.2) * severityVelocityBoost;
+		const verticalMultiplier = (type === 'boulder' ? 2.0 : 1.5) * severityVelocityBoost;
 
 		particles.push({
 			id: particleIdCounter++,
@@ -321,7 +331,7 @@
 		const euler = new THREE.Euler();
 
 		// Update rock instances
-		const rockCount = Math.min(rockParticles.length, MAX_PARTICLES);
+		const rockCount = Math.min(rockParticles.length, maxParticles);
 		rockMesh.count = rockCount;
 
 		for (let i = 0; i < rockCount; i++) {
@@ -336,7 +346,7 @@
 		rockMesh.instanceMatrix.needsUpdate = true;
 
 		// Update soil instances
-		const soilCount = Math.min(soilParticles.length, MAX_PARTICLES);
+		const soilCount = Math.min(soilParticles.length, maxParticles);
 		soilMesh.count = soilCount;
 
 		for (let i = 0; i < soilCount; i++) {
@@ -362,7 +372,7 @@
 		for (let colorIdx = 0; colorIdx < boulderMeshes.length; colorIdx++) {
 			const mesh = boulderMeshes[colorIdx];
 			const colorGroup = bouldersByColor[colorIdx];
-			const count = Math.min(colorGroup.length, MAX_BOULDERS);
+			const count = Math.min(colorGroup.length, maxBoulders);
 			mesh.count = count;
 
 			for (let i = 0; i < count; i++) {
@@ -419,7 +429,7 @@
 			const currentSpawnRate = getSpawnRate();
 			if (currentSpawnRate > 0) {
 				spawnAccumulator += delta * currentSpawnRate;
-				while (spawnAccumulator >= 1 && particles.length < MAX_PARTICLES) {
+				while (spawnAccumulator >= 1 && particles.length < maxParticles) {
 					spawnParticle();
 					spawnAccumulator -= 1;
 				}

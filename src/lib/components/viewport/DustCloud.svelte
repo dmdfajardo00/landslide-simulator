@@ -24,6 +24,7 @@
 		progress?: number;
 		worldScale?: number;
 		maxElevation?: number;
+		severity?: number; // 1-100, controls dust intensity
 	}
 
 	let {
@@ -31,12 +32,16 @@
 		failureZone = null,
 		progress = 0,
 		worldScale = 100,
-		maxElevation = 50
+		maxElevation = 50,
+		severity = 50
 	}: Props = $props();
 
 	// Dust configuration - synced with debris timing
-	const MAX_PARTICLES = 300; // Reduced for subtler effect
-	const SPAWN_RATE = 40; // Particles per second during flowing phase
+	// Derive dust parameters from severity
+	const BASE_MAX_PARTICLES = 300;
+	const BASE_SPAWN_RATE = 40;
+	let maxParticles = $derived(Math.round(BASE_MAX_PARTICLES * (severity / 50)));
+	let spawnRate = $derived(BASE_SPAWN_RATE * (severity / 50));
 	const DUST_COLOR = new THREE.Color(0xb8a080); // Slightly more brown dusty color
 	const RISE_SPEED = 2.5; // Base upward velocity
 	const DRIFT_SPEED = 1.0; // Horizontal drift variation
@@ -81,9 +86,9 @@
 		if (initialized) return;
 
 		pointsGeometry = new THREE.BufferGeometry();
-		const positions = new Float32Array(MAX_PARTICLES * 3);
-		const sizes = new Float32Array(MAX_PARTICLES);
-		const opacities = new Float32Array(MAX_PARTICLES);
+		const positions = new Float32Array(maxParticles * 3);
+		const sizes = new Float32Array(maxParticles);
+		const opacities = new Float32Array(maxParticles);
 
 		pointsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 		pointsGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
@@ -110,7 +115,7 @@
 
 	// Spawn a new dust particle in the active deformation zone
 	function spawnParticle() {
-		if (!failureZone || particles.length >= MAX_PARTICLES) return;
+		if (!failureZone || particles.length >= maxParticles) return;
 
 		const { startX, endX, headZ, length: slideLength } = failureZone;
 
@@ -185,7 +190,7 @@
 		const sizes = pointsGeometry.attributes.size.array as Float32Array;
 		const opacities = pointsGeometry.attributes.opacity?.array as Float32Array;
 
-		const count = Math.min(particles.length, MAX_PARTICLES);
+		const count = Math.min(particles.length, maxParticles);
 
 		for (let i = 0; i < count; i++) {
 			const p = particles[i];
@@ -235,10 +240,10 @@
 				// Taper: 0.7-0.85
 				spawnIntensity = 1 - (progress - 0.7) / 0.15;
 			}
-			const spawnRate = SPAWN_RATE * spawnIntensity;
+			const effectiveSpawnRate = spawnRate * spawnIntensity;
 
-			spawnAccumulator += delta * spawnRate;
-			while (spawnAccumulator >= 1 && particles.length < MAX_PARTICLES) {
+			spawnAccumulator += delta * effectiveSpawnRate;
+			while (spawnAccumulator >= 1 && particles.length < maxParticles) {
 				spawnParticle();
 				spawnAccumulator -= 1;
 			}

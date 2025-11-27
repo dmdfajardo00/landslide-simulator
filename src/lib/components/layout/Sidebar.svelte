@@ -21,6 +21,9 @@
 		hydraulicConductivity?: number;
 		// Reliability
 		coefficientOfVariation?: number;
+		// Landslide visualization
+		landslideSeverity?: number;
+		boulderDensity?: number;
 	}
 
 	let {
@@ -40,7 +43,10 @@
 		frictionAngle = $bindable(32),
 		hydraulicConductivity = $bindable(5.0),
 		// Reliability
-		coefficientOfVariation = $bindable(0.15)
+		coefficientOfVariation = $bindable(0.15),
+		// Landslide visualization
+		landslideSeverity = $bindable(50),
+		boulderDensity = $bindable(15)
 	}: Props = $props();
 </script>
 
@@ -154,6 +160,28 @@
 					min={0.05}
 					max={0.5}
 					step={0.01}
+					unit=""
+				/>
+			{/snippet}
+		</ParameterCard>
+
+		<!-- Landslide Visualization -->
+		<ParameterCard title="Landslide Visualization" icon="fluent:fire-24-regular">
+			{#snippet children()}
+				<ParameterSlider
+					label="Severity"
+					bind:value={landslideSeverity}
+					min={1}
+					max={100}
+					step={1}
+					unit="%"
+				/>
+				<ParameterSlider
+					label="Boulder Density"
+					bind:value={boulderDensity}
+					min={0}
+					max={50}
+					step={1}
 					unit=""
 				/>
 			{/snippet}

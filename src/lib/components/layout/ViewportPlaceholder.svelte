@@ -29,6 +29,8 @@
 		// Landslide progress and failure zone for debris particles
 		landslideProgress?: number;
 		failureZone?: FailureZone | null;
+		landslideSeverity?: number;
+		boulderDensity?: number;
 	}
 
 	let {
@@ -45,7 +47,9 @@
 		depositionDepth = null,
 		deformationVersion = 0,
 		landslideProgress = 0,
-		failureZone = null
+		failureZone = null,
+		landslideSeverity = 50,
+		boulderDensity = 15
 	}: Props = $props();
 
 	// Terrain configuration (shared constants)
@@ -107,6 +111,8 @@
 				{worldScale}
 				{maxElevation}
 				progress={landslideProgress}
+				severity={landslideSeverity}
+				{boulderDensity}
 			/>
 			<DustCloud
 				isActive={isLandslideActive}
@@ -114,6 +120,7 @@
 				progress={landslideProgress}
 				{worldScale}
 				{maxElevation}
+				severity={landslideSeverity}
 			/>
 		{/if}
 	</Canvas>
