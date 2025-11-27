@@ -37,7 +37,7 @@ export const hazardFillLayer: LayerSpecification = {
 	id: 'hazard-fill',
 	type: 'fill',
 	source: 'hazard-tiles',
-	'source-layer': 'default',
+	'source-layer': 'hazards',
 	paint: {
 		'fill-color': [
 			'interpolate',
@@ -61,7 +61,7 @@ export const hazardOutlineLayer: LayerSpecification = {
 	id: 'hazard-outline',
 	type: 'line',
 	source: 'hazard-tiles',
-	'source-layer': 'default',
+	'source-layer': 'hazards',
 	paint: {
 		'line-color': [
 			'interpolate',
@@ -86,7 +86,7 @@ export const selectedPolygonLayer: LayerSpecification = {
 	id: 'hazard-selected',
 	type: 'line',
 	source: 'hazard-tiles',
-	'source-layer': 'default',
+	'source-layer': 'hazards',
 	paint: {
 		'line-color': '#ffffff',
 		'line-width': 3,
@@ -99,14 +99,24 @@ export const selectedPolygonLayer: LayerSpecification = {
  * Hazard level metadata for UI display and legend generation
  */
 export const hazardLevels = [
-	{ value: 1, label: 'Low Hazard', color: '#22c55e', description: 'Minimal landslide risk' },
+	{
+		value: 1,
+		label: 'Low Hazard',
+		color: '#22c55e',
+		description: 'Areas exhibit stable slope conditions with minimal landslide susceptibility. Failures occur rarely and only under extreme rainfall or seismic events.'
+	},
 	{
 		value: 2,
 		label: 'Moderate Hazard',
 		color: '#eab308',
-		description: 'Moderate landslide risk'
+		description: 'Areas show increased landslide potential due to moderate slope angles, soil conditions, or past movement evidence. Failures may occur during prolonged heavy rainfall or ground disturbance.'
 	},
-	{ value: 3, label: 'High Hazard', color: '#ef4444', description: 'Elevated landslide risk' }
+	{
+		value: 3,
+		label: 'High Hazard',
+		color: '#ef4444',
+		description: 'Areas exhibit critical slope instability with steep gradients, weak soil composition, or history of landslide activity. Failures are likely during intense rainfall, requiring heightened monitoring and mitigation measures.'
+	}
 ] as const;
 
 /**

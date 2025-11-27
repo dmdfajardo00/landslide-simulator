@@ -256,7 +256,7 @@
 <!-- Documentation Modal -->
 {#if showModal}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showModal = false)}></div>
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={() => (showModal = false)}>
 		<div class="bg-white rounded-lg shadow-xl flex h-full max-h-[90vh] w-full max-w-4xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
 			<!-- Sidebar Tabs -->
 			<div class="w-48 border-r border-neutral-200 bg-neutral-50 flex flex-col">
@@ -400,7 +400,7 @@
 <!-- About Modal -->
 {#if showAbout}
 	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showAbout = false)}></div>
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" onclick={() => (showAbout = false)}>
 		<div class="bg-white rounded-lg shadow-xl max-h-[90vh] w-full max-w-2xl overflow-y-auto" onclick={(e) => e.stopPropagation()}>
 			<div class="p-8">
 				<div class="flex items-center justify-between mb-6">
@@ -489,6 +489,16 @@
 					<p class="text-sm text-neutral-700 leading-relaxed">
 						The 3D Dynamic Landslide Generator is an interactive educational tool designed to help students and professionals understand the complex physics of slope stability and landslide mechanics. Built with modern web technologies, this simulator provides real-time visualization of geotechnical principles including Factor of Safety calculations, pore water pressure dynamics, and probability-based failure assessment.
 					</p>
+				</div>
+
+				<!-- Data Sources -->
+				<div class="border-t border-neutral-200 pt-6 mt-6">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Data Sources</h2>
+					<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+						<p class="text-sm text-neutral-700">
+							<strong>Landslide Hazard Data:</strong> <a href="/map" class="text-blue-600 hover:text-blue-700 transition-colors">Cebu Landslide Hazards Dataset</a>
+						</p>
+					</div>
 				</div>
 
 				<!-- Close Button -->

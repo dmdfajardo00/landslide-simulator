@@ -11,7 +11,6 @@
 		selectedFeature?: MapGeoJSONFeature | null;
 		hoveredFeature?: MapGeoJSONFeature | null;
 		activeFilters?: LandslideHazardLevel[];
-		onFilterChange?: (filters: LandslideHazardLevel[]) => void;
 		onLoadInSimulator?: (params: SimulatorParams) => void;
 		onResetView?: () => void;
 		onGoToLocation?: () => void;
@@ -22,7 +21,6 @@
 		selectedFeature = null,
 		hoveredFeature = null,
 		activeFilters = $bindable([]),
-		onFilterChange,
 		onLoadInSimulator,
 		onResetView,
 		onGoToLocation,
@@ -35,12 +33,10 @@
 		} else {
 			activeFilters = [...activeFilters, level];
 		}
-		onFilterChange?.(activeFilters);
 	}
 
 	function clearFilters() {
 		activeFilters = [];
-		onFilterChange?.([]);
 	}
 
 	function handleLoadInSimulator() {
@@ -52,6 +48,8 @@
 
 	const displayFeature = $derived(selectedFeature || hoveredFeature);
 	const featureLH = $derived(displayFeature?.properties?.LH as LandslideHazardLevel | undefined);
+
+	let hoveredLegendLevel = $state<number | null>(null);
 </script>
 
 <aside class="w-80 bg-white border-r border-neutral-200 overflow-y-auto flex flex-col h-full">
@@ -128,9 +126,10 @@
 
 		<!-- Location Info -->
 		{#if displayFeature}
-			{@const lh = featureLH ?? 1.0}
-			{@const color = getHazardColor(lh)}
-			{@const label = getHazardLabel(lh)}
+			{@const hasHazardData = featureLH !== undefined && featureLH !== null}
+			{@const lh = featureLH ?? 0}
+			{@const color = hasHazardData ? getHazardColor(lh) : '#94a3b8'}
+			{@const label = hasHazardData ? getHazardLabel(lh) : 'No Data'}
 			<Card class="bg-white border-neutral-200 shadow-sm p-4">
 				<div class="flex items-center gap-2 mb-3">
 					<Icon icon="fluent:location-24-regular" class="w-5 h-5 text-neutral-700" />
@@ -145,29 +144,35 @@
 						<span class="text-sm font-medium text-neutral-800">{label}</span>
 					</div>
 
-					<div class="text-xs text-neutral-600 space-y-1">
-						<div class="flex justify-between">
-							<span>Hazard Level (LH)</span>
-							<span class="font-medium">{lh}</span>
-						</div>
-						{#if displayFeature.id}
+					{#if hasHazardData}
+						<div class="text-xs text-neutral-600 space-y-1">
 							<div class="flex justify-between">
-								<span>Feature ID</span>
-								<span class="font-mono">{displayFeature.id}</span>
+								<span>Hazard Level (LH)</span>
+								<span class="font-medium">{lh}</span>
+							</div>
+							{#if displayFeature.id}
+								<div class="flex justify-between">
+									<span>Feature ID</span>
+									<span class="font-mono">{displayFeature.id}</span>
+								</div>
+							{/if}
+						</div>
+
+						{#if selectedFeature}
+							<div class="pt-2 border-t border-neutral-100">
+								<Button
+									onclick={handleLoadInSimulator}
+									class="w-full bg-neutral-900 hover:bg-neutral-800 text-white text-sm"
+								>
+									<Icon icon="fluent:open-24-regular" class="w-4 h-4 mr-2" />
+									Load in Simulator
+								</Button>
 							</div>
 						{/if}
-					</div>
-
-					{#if selectedFeature}
-						<div class="pt-2 border-t border-neutral-100">
-							<Button
-								onclick={handleLoadInSimulator}
-								class="w-full bg-neutral-900 hover:bg-neutral-800 text-white text-sm"
-							>
-								<Icon icon="fluent:open-24-regular" class="w-4 h-4 mr-2" />
-								Load in Simulator
-							</Button>
-						</div>
+					{:else}
+						<p class="text-xs text-neutral-500">
+							This location has no landslide hazard data available.
+						</p>
 					{/if}
 				</div>
 			</Card>
@@ -191,14 +196,31 @@
 			</div>
 			<div class="space-y-2">
 				{#each hazardLevels as level}
-					<div class="flex items-center gap-2">
+					<div class="relative">
 						<div
-							class="w-4 h-4 rounded"
-							style="background-color: {level.color}; opacity: 0.7;"
-						></div>
-						<div class="flex-1">
-							<span class="text-xs text-neutral-700">{level.label}</span>
+							class="flex items-center gap-2 p-2 rounded-lg transition-colors hover:bg-neutral-50 cursor-help"
+							onmouseenter={() => (hoveredLegendLevel = level.value)}
+							onmouseleave={() => (hoveredLegendLevel = null)}
+						>
+							<div
+								class="w-4 h-4 rounded flex-shrink-0"
+								style="background-color: {level.color}; opacity: 0.7;"
+							></div>
+							<div class="flex-1">
+								<span class="text-xs text-neutral-700">{level.label}</span>
+							</div>
+							<Icon icon="fluent:info-16-regular" class="w-3.5 h-3.5 text-neutral-400" />
 						</div>
+
+						{#if hoveredLegendLevel === level.value}
+							<div class="absolute left-0 right-0 top-full mt-1 z-10 bg-neutral-900 text-white text-xs rounded-lg p-3 shadow-xl">
+								<div class="flex items-start gap-2">
+									<Icon icon="fluent:info-16-filled" class="w-3.5 h-3.5 text-neutral-300 flex-shrink-0 mt-0.5" />
+									<p class="leading-relaxed">{level.description}</p>
+								</div>
+								<div class="absolute -top-1 left-4 w-2 h-2 bg-neutral-900 rotate-45"></div>
+							</div>
+						{/if}
 					</div>
 				{/each}
 			</div>
