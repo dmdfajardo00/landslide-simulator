@@ -74,6 +74,11 @@
 		{ label: 'Effective Cohesion', abbrev: "c'", value: cohesion.toFixed(1), unit: 'kPa', status: cohesionStatus, history: [], min: 0, max: 30 }
 	]);
 
+	// Modal state
+	let activeTab = $state<'student' | 'formulas' | 'info' | 'parameters'>('formulas');
+	let showModal = $state(false);
+	let showAbout = $state(false);
+
 	// Generate SVG path for sparkline
 	function generatePath(data: number[], min: number, max: number, width: number = 240, height: number = 40) {
 		if (data.length < 2) return '';
@@ -114,9 +119,9 @@
 	</div>
 
 	<!-- Metrics with Charts -->
-	<div class="flex-1 space-y-4 p-4">
+	<div class="flex-1 space-y-3 p-4 pb-2">
 		{#each metrics as metric (metric.abbrev)}
-			<div class="space-y-2">
+			<div class="space-y-1.5">
 				<!-- Metric Header -->
 				<div class="flex items-baseline justify-between">
 					<div class="flex flex-col">
@@ -124,16 +129,16 @@
 						<span class="text-[10px] text-neutral-400">({metric.abbrev})</span>
 					</div>
 					<div class="flex items-baseline gap-1">
-						<span class="text-base font-mono font-bold text-neutral-900">{metric.value}</span>
+						<span class="text-sm font-mono font-bold text-neutral-900">{metric.value}</span>
 						{#if metric.unit}
-							<span class="text-xs text-neutral-500">{metric.unit}</span>
+							<span class="text-[9px] text-neutral-500">{metric.unit}</span>
 						{/if}
 					</div>
 				</div>
 
 				<!-- Sparkline Chart -->
 				{#if metric.history.length > 1}
-					<div class="h-10 bg-neutral-50 rounded border border-neutral-100 p-2">
+					<div class="h-8 bg-neutral-50 rounded border border-neutral-100 p-1.5">
 						<svg width="100%" height="100%" viewBox="0 0 240 40" preserveAspectRatio="none">
 							<!-- Grid lines -->
 							<line x1="0" y1="40" x2="240" y2="40" stroke="#E5E7EB" stroke-width="0.5" />
@@ -175,25 +180,327 @@
 					</div>
 				{/if}
 
-				<!-- Status indicator (no CSS transition - updates too frequently) -->
+				<!-- Status indicator -->
 				<div class="flex items-center gap-2">
-					<div class="h-1 flex-1 bg-neutral-100 rounded-full overflow-hidden">
+					<div class="h-0.5 flex-1 bg-neutral-100 rounded-full overflow-hidden">
 						<div
 							class="h-full"
 							style="width: {Math.min(100, Math.max(0, ((parseFloat(metric.value) - metric.min) / (metric.max - metric.min)) * 100))}%; background-color: {getMetricColor(metric.status)};"
 						></div>
 					</div>
-					<span class="text-[10px] font-semibold text-neutral-500">{metric.min}-{metric.max}</span>
+					<span class="text-[9px] font-semibold text-neutral-500 whitespace-nowrap">{metric.min}-{metric.max}</span>
 				</div>
 			</div>
 		{/each}
 	</div>
 
-	<!-- Footer Stats -->
-	<div class="px-4 py-3 border-t border-neutral-100 bg-neutral-50">
+	<!-- Particles Displaced -->
+	<div class="px-4 py-2 border-t border-neutral-100 bg-neutral-50">
 		<div class="flex items-center justify-between">
-			<span class="text-xs font-semibold text-neutral-600 uppercase">Particles Displaced</span>
+			<span class="text-xs font-semibold text-neutral-600">Displaced</span>
 			<span class="text-sm font-mono font-bold text-neutral-900">{displacedParticles}</span>
 		</div>
 	</div>
+
+	<!-- Info Buttons Grid -->
+	<div class="p-4 border-t border-neutral-100 grid grid-cols-2 gap-2">
+		<button
+			onclick={() => {
+				showModal = true;
+				activeTab = 'student';
+			}}
+			class="px-3 py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+		>
+			STUDENT GUIDE
+		</button>
+		<button
+			onclick={() => {
+				showModal = true;
+				activeTab = 'formulas';
+			}}
+			class="px-3 py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+		>
+			FORMULAS & THEORY
+		</button>
+		<button
+			onclick={() => {
+				showModal = true;
+				activeTab = 'info';
+			}}
+			class="px-3 py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+		>
+			SIMULATION INFO
+		</button>
+		<button
+			onclick={() => {
+				showModal = true;
+				activeTab = 'parameters';
+			}}
+			class="px-3 py-2.5 text-xs font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+		>
+			GEOTECHNICAL PARAMETERS
+		</button>
+	</div>
+
+	<!-- About Button -->
+	<div class="px-4 py-3 border-t border-neutral-100 bg-neutral-50">
+		<button
+			onclick={() => (showAbout = true)}
+			class="w-full px-3 py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-white hover:bg-neutral-100 rounded border border-neutral-200 transition-colors"
+		>
+			ABOUT THIS PROJECT
+		</button>
+	</div>
 </aside>
+
+<!-- Documentation Modal -->
+{#if showModal}
+	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showModal = false)}></div>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div class="bg-white rounded-lg shadow-xl flex h-full max-h-[90vh] w-full max-w-4xl overflow-hidden" onclick={(e) => e.stopPropagation()}>
+			<!-- Sidebar Tabs -->
+			<div class="w-48 border-r border-neutral-200 bg-neutral-50 flex flex-col">
+				<div class="px-4 py-3 border-b border-neutral-200">
+					<h3 class="text-sm font-semibold text-neutral-900">Documentation</h3>
+				</div>
+				<nav class="flex-1 space-y-1 p-2 overflow-y-auto">
+					{#each [
+						{ id: 'student', label: 'Student Guide' },
+						{ id: 'formulas', label: 'Formulas & Theory' },
+						{ id: 'info', label: 'Simulation Info' },
+						{ id: 'parameters', label: 'Geotechnical Parameters' }
+					] as tab}
+						<button
+							onclick={() => (activeTab = tab.id)}
+							class="w-full px-3 py-2 text-left text-xs font-medium rounded transition-colors {activeTab === tab.id
+								? 'bg-white text-neutral-900 border border-neutral-200'
+								: 'text-neutral-600 hover:bg-neutral-100'}"
+						>
+							{tab.label}
+						</button>
+					{/each}
+				</nav>
+				<button
+					onclick={() => (showModal = false)}
+					class="m-2 px-3 py-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 border border-neutral-200 rounded transition-colors"
+				>
+					Close
+				</button>
+			</div>
+
+			<!-- Content Area -->
+			<div class="flex-1 overflow-y-auto p-6">
+				{#if activeTab === 'student'}
+					<div class="prose prose-sm max-w-none">
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Student Guide</h2>
+						<div class="space-y-4 text-neutral-700">
+							<p>Welcome to the <strong>3D Dynamic Landslide Generator</strong> - an interactive physics simulation tool designed for geotechnical engineering education.</p>
+							<h3 class="font-semibold text-neutral-900 mt-4">Getting Started</h3>
+							<ul class="list-disc list-inside space-y-2 text-sm">
+								<li>Adjust slope angle and soil properties using the left panel controls</li>
+								<li>Use the action buttons to toggle rain simulation and trigger landslides</li>
+								<li>Monitor the metrics panel on the right to track Factor of Safety, Probability of Failure, and other key indicators</li>
+								<li>Observe real-time 3D terrain deformation and particle physics</li>
+							</ul>
+							<h3 class="font-semibold text-neutral-900 mt-4">Key Concepts</h3>
+							<ul class="list-disc list-inside space-y-2 text-sm">
+								<li><strong>Factor of Safety (FoS):</strong> Ratio of shear strength to shear stress. FoS > 1.5 indicates stability</li>
+								<li><strong>Pore Pressure:</strong> Water pressure within soil affects shear strength and failure</li>
+								<li><strong>Slope Angle:</strong> Steeper slopes are more susceptible to failure</li>
+								<li><strong>Vegetation:</strong> Root systems increase soil cohesion and stability</li>
+							</ul>
+						</div>
+					</div>
+				{:else if activeTab === 'formulas'}
+					<div class="prose prose-sm max-w-none">
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Formulas & Theory</h2>
+						<div class="space-y-6 text-neutral-700 font-mono text-xs">
+							<div>
+								<h3 class="font-bold text-neutral-900">Infinite Slope Analysis</h3>
+								<p class="mt-2">FoS = (c + γ·h·cosθ·(1-ru)·tanφ) / (γ·h·sinθ·cosθ)</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: c = cohesion, γ = unit weight, h = height, θ = angle, ru = pore pressure ratio, φ = friction angle</p>
+							</div>
+							<div>
+								<h3 class="font-bold text-neutral-900">Pore Pressure Ratio</h3>
+								<p class="mt-2">ru = Pw / (γ·h)</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: Pw = pore water pressure, γ = unit weight of water, h = height of soil</p>
+							</div>
+							<div>
+								<h3 class="font-bold text-neutral-900">Probability of Failure (First-Order Second-Moment)</h3>
+								<p class="mt-2">PoF = Φ(-β) where β = (μ_FoS) / σ_FoS</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: μ = mean, σ = standard deviation, Φ = standard normal CDF</p>
+							</div>
+							<div>
+								<h3 class="font-bold text-neutral-900">Vegetation Effect on Cohesion</h3>
+								<p class="mt-2">c' = c + c_root·V</p>
+								<p class="text-[11px] mt-1 text-neutral-500">Where: c' = effective cohesion, c_root = root cohesion, V = vegetation coverage %</p>
+							</div>
+						</div>
+					</div>
+				{:else if activeTab === 'info'}
+					<div class="prose prose-sm max-w-none">
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Simulation Information</h2>
+						<div class="space-y-4 text-neutral-700 text-sm">
+							<h3 class="font-semibold text-neutral-900">Physics Engine</h3>
+							<p>This simulator uses <strong>Rapier3D</strong> physics engine for real-time rigid body dynamics and particle systems.</p>
+							<h3 class="font-semibold text-neutral-900 mt-4">Real-time Calculations</h3>
+							<ul class="list-disc list-inside space-y-2">
+								<li>Factor of Safety updates every simulation step</li>
+								<li>Pore pressure increases with rainfall intensity and infiltration</li>
+								<li>Particle displacement tracked when FoS drops below critical threshold</li>
+								<li>Vegetation provides dynamic cohesion contribution</li>
+							</ul>
+							<h3 class="font-semibold text-neutral-900 mt-4">Visualization Features</h3>
+							<ul class="list-disc list-inside space-y-2">
+								<li>3D terrain with adjustable slope geometry</li>
+								<li>Real-time rain particle system</li>
+								<li>Debris and soil particle ejection during landslide</li>
+								<li>Vegetation representation with trees</li>
+								<li>Color-coded stability indicators</li>
+							</ul>
+						</div>
+					</div>
+				{:else if activeTab === 'parameters'}
+					<div class="prose prose-sm max-w-none">
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Geotechnical Parameters</h2>
+						<div class="space-y-4 text-neutral-700 text-sm">
+							<h3 class="font-semibold text-neutral-900">Slope Geometry</h3>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Slope Angle (θ):</strong> 15-75° - Controls gravitational component along slope</li>
+								<li><strong>Soil Depth (H):</strong> 1-10m - Thickness of potentially failing soil layer</li>
+								<li><strong>Max Elevation:</strong> 20-100m - Overall terrain height in 3D view</li>
+							</ul>
+							<h3 class="font-semibold text-neutral-900 mt-4">Soil Properties</h3>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Cohesion (c):</strong> 0-50 kPa - Internal soil strength independent of stress</li>
+								<li><strong>Friction Angle (φ):</strong> 15-45° - Angle of internal friction</li>
+								<li><strong>Unit Weight (γ):</strong> 16-22 kN/m³ - Weight per unit volume of soil</li>
+								<li><strong>Hydraulic Conductivity (k):</strong> 1e-6 to 1e-3 m/s - Rate of water infiltration</li>
+							</ul>
+							<h3 class="font-semibold text-neutral-900 mt-4">Hydrological Factors</h3>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Rainfall Intensity (I):</strong> 0-100 mm/hr - Rate of water input</li>
+								<li><strong>Pore Pressure (Pw):</strong> 0-100 kPa - Water pressure in soil pores</li>
+								<li><strong>Saturation (S):</strong> 0-100% - Percentage of pores filled with water</li>
+							</ul>
+							<h3 class="font-semibold text-neutral-900 mt-4">Vegetation</h3>
+							<ul class="list-disc list-inside space-y-2">
+								<li><strong>Coverage (%):</strong> 0-100% - Density of plant cover on slope</li>
+								<li><strong>Root Strength:</strong> Contributes 2-5 kPa per 10% coverage</li>
+								<li><strong>Interception:</strong> Vegetation intercepts ~30% of rainfall</li>
+							</ul>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- About Modal -->
+{#if showAbout}
+	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (showAbout = false)}></div>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<div class="bg-white rounded-lg shadow-xl max-h-[90vh] w-full max-w-2xl overflow-y-auto" onclick={(e) => e.stopPropagation()}>
+			<div class="p-8">
+				<div class="flex items-center justify-between mb-6">
+					<h1 class="text-2xl font-bold text-neutral-900">About This Project</h1>
+					<button
+						onclick={() => (showAbout = false)}
+						class="text-neutral-400 hover:text-neutral-600 text-2xl leading-none"
+					>
+						×
+					</button>
+				</div>
+
+				<!-- Research Team -->
+				<div class="mb-8">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Research Team</h2>
+					<p class="text-sm text-neutral-600 mb-3">This project was developed by the following researchers from Cebu Normal University:</p>
+					<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+						<ul class="text-sm text-neutral-700 space-y-1">
+							<li>Angelo Cantila</li>
+							<li>Hanah Jane Marie Cantos</li>
+							<li>Marynylle Englis</li>
+							<li>Joana Paula Lugay</li>
+							<li>Charle Mae Matero</li>
+							<li>Vickcir Anne Sare</li>
+							<li>Greven Ventic</li>
+							<li>Jade Bryan Zulueta</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- Advisor -->
+				<div class="mb-8">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Presented to</h2>
+					<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+						<p class="text-sm text-neutral-700">
+							<strong>Dr. Jennifer D. Paño</strong><br />
+							Cebu Normal University - Main Campus
+						</p>
+					</div>
+				</div>
+
+				<!-- Developer -->
+				<div class="mb-8">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">Developed By</h2>
+					<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+						<div class="flex items-center justify-between">
+							<a
+								href="http://dmdfajardo.pro/"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+							>
+								Dave Fajardo
+							</a>
+							<div class="flex gap-2">
+								<a
+									href="https://github.com/dmdfajardo00"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="text-neutral-600 hover:text-neutral-900 transition-colors"
+									title="GitHub"
+								>
+									<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v 3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+									</svg>
+								</a>
+								<a
+									href="https://www.linkedin.com/in/dave-fajardo-686374188/"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="text-neutral-600 hover:text-neutral-900 transition-colors"
+									title="LinkedIn"
+								>
+									<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M20.447 20.452h-3.554v-5.569c0-1.328-.475-2.236-1.986-2.236-1.081 0-1.722.731-2.004 1.438-.103.249-.129.597-.129.945v5.422h-3.554s.05-8.736 0-9.646h3.554v1.366c.43-.664 1.197-1.608 2.905-1.608 2.121 0 3.713 1.388 3.713 4.37v5.518zM5.337 9.433c-1.144 0-1.915-.758-1.915-1.706 0-.951.769-1.706 1.959-1.706 1.187 0 1.912.755 1.937 1.706 0 .948-.75 1.706-1.981 1.706zm1.946 11.019H3.39V9.806h3.893v10.646zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/>
+									</svg>
+								</a>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- About Section -->
+				<div class="border-t border-neutral-200 pt-6">
+					<h2 class="text-lg font-semibold text-neutral-900 mb-3">About the Simulator</h2>
+					<p class="text-sm text-neutral-700 leading-relaxed">
+						The 3D Dynamic Landslide Generator is an interactive educational tool designed to help students and professionals understand the complex physics of slope stability and landslide mechanics. Built with modern web technologies, this simulator provides real-time visualization of geotechnical principles including Factor of Safety calculations, pore water pressure dynamics, and probability-based failure assessment.
+					</p>
+				</div>
+
+				<!-- Close Button -->
+				<div class="mt-8 flex justify-end">
+					<button
+						onclick={() => (showAbout = false)}
+						class="px-4 py-2 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+					>
+						Close
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}

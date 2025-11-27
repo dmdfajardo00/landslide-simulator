@@ -4,6 +4,7 @@
 	import Trees from '$lib/components/viewport/Trees.svelte';
 	import Rain from '$lib/components/viewport/Rain.svelte';
 	import Debris from '$lib/components/viewport/Debris.svelte';
+	import DustCloud from '$lib/components/viewport/DustCloud.svelte';
 	import CameraController from '$lib/components/viewport/CameraController.svelte';
 	import Lighting from '$lib/components/viewport/Lighting.svelte';
 	import Sky from '$lib/components/viewport/Sky.svelte';
@@ -83,6 +84,9 @@
 				maxTreeCount={150}
 				maxSlope={25}
 				{vegetationCover}
+				{failureZone}
+				{landslideProgress}
+				{isLandslideActive}
 			/>
 		{/if}
 
@@ -103,6 +107,13 @@
 				{worldScale}
 				{maxElevation}
 				progress={landslideProgress}
+			/>
+			<DustCloud
+				isActive={isLandslideActive}
+				{failureZone}
+				progress={landslideProgress}
+				{worldScale}
+				{maxElevation}
 			/>
 		{/if}
 	</Canvas>
