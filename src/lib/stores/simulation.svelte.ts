@@ -260,7 +260,7 @@ function createSimulationStore() {
    * Uses infinite slope analysis from physics module
    */
   function calculateFoS(): number {
-    const { cohesion, frictionAngle, slopeAngle, unitWeight, soilDepth } = geotechnical;
+    const { cohesion, frictionAngle, slopeAngle, unitWeight, soilDepth, hydraulicConductivity } = geotechnical;
     const { ru } = simulationState;
 
     // Calculate pore pressure from ru
@@ -271,7 +271,7 @@ function createSimulationStore() {
 
     // Use physics module implementation
     return calculateFoSPhysics(
-      { slopeAngle, soilDepth, unitWeight, cohesion, frictionAngle },
+      { slopeAngle, soilDepth, unitWeight, cohesion, frictionAngle, hydraulicConductivity },
       porePressure
     );
   }
