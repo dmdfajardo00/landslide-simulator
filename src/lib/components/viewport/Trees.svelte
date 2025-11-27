@@ -13,6 +13,7 @@
 		maxTreeCount?: number;
 		maxSlope?: number;
 		vegetationCover?: number; // 0-100%
+		soilDepth?: number; // For height scaling
 		failureZone?: FailureZone | null;
 		landslideProgress?: number;
 		isLandslideActive?: boolean;
@@ -27,6 +28,7 @@
 		maxTreeCount = 150,
 		maxSlope = 30,
 		vegetationCover = 70,
+		soilDepth = 3.0,
 		failureZone = null,
 		landslideProgress = 0,
 		isLandslideActive = false
@@ -71,25 +73,27 @@
 		vegetationCover <= 30 ? 0 : Math.floor(((vegetationCover - 30) / 70) * maxTreeCount)
 	);
 
-	// Get height at normalized position
+	// Get height at normalized position (accounting for soilDepth scaling)
 	function getHeightAt(normX: number, normZ: number): number {
 		const x = Math.floor(normX * (width - 1));
 		const z = Math.floor(normZ * (height - 1));
 		const idx = Math.min(z * width + x, heightmap.length - 1);
-		return heightmap[idx] * maxElevation;
+		const heightScale = soilDepth / 3.0;
+		return heightmap[idx] * maxElevation * heightScale;
 	}
 
-	// Calculate slope at position
+	// Calculate slope at position (accounting for soilDepth scaling)
 	function getSlopeAt(normX: number, normZ: number): number {
 		const cellSize = worldScale / (width - 1);
 		const x = Math.floor(normX * (width - 1));
 		const z = Math.floor(normZ * (height - 1));
 		const idx = z * width + x;
+		const heightScale = soilDepth / 3.0;
 
-		const hL = (x > 0 ? heightmap[idx - 1] : heightmap[idx]) * maxElevation;
-		const hR = (x < width - 1 ? heightmap[idx + 1] : heightmap[idx]) * maxElevation;
-		const hD = (z > 0 ? heightmap[idx - width] : heightmap[idx]) * maxElevation;
-		const hU = (z < height - 1 ? heightmap[idx + width] : heightmap[idx]) * maxElevation;
+		const hL = (x > 0 ? heightmap[idx - 1] : heightmap[idx]) * maxElevation * heightScale;
+		const hR = (x < width - 1 ? heightmap[idx + 1] : heightmap[idx]) * maxElevation * heightScale;
+		const hD = (z > 0 ? heightmap[idx - width] : heightmap[idx]) * maxElevation * heightScale;
+		const hU = (z < height - 1 ? heightmap[idx + width] : heightmap[idx]) * maxElevation * heightScale;
 
 		const dhdx = (hR - hL) / (2 * cellSize);
 		const dhdz = (hU - hD) / (2 * cellSize);

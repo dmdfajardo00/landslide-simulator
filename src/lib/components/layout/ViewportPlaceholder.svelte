@@ -90,6 +90,7 @@
 				maxTreeCount={150}
 				maxSlope={25}
 				{vegetationCover}
+				{soilDepth}
 				{failureZone}
 				{landslideProgress}
 				{isLandslideActive}
@@ -112,6 +113,7 @@
 				{height}
 				{worldScale}
 				{maxElevation}
+				{soilDepth}
 				progress={landslideProgress}
 				severity={landslideSeverity}
 				{boulderDensity}

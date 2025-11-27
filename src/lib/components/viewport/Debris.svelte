@@ -13,6 +13,7 @@
 		height?: number;
 		worldScale?: number;
 		maxElevation?: number;
+		soilDepth?: number; // For height scaling
 		progress?: number;
 		severity?: number; // 1-100, controls spawn rate and particle behavior
 		boulderDensity?: number; // 0-50, controls boulder count and probability
@@ -26,6 +27,7 @@
 		height = 128,
 		worldScale = 100,
 		maxElevation = 50,
+		soilDepth = 3.0,
 		progress = 0,
 		severity = 50,
 		boulderDensity = 15
@@ -130,7 +132,7 @@
 		}
 	}
 
-	// Get terrain height at world position
+	// Get terrain height at world position (accounting for soilDepth scaling)
 	function getTerrainHeight(worldX: number, worldZ: number): number {
 		const gx = Math.floor((worldX / worldScale) * (width - 1));
 		const gz = Math.floor((worldZ / worldScale) * (height - 1));
@@ -140,7 +142,8 @@
 		}
 
 		const idx = gz * width + gx;
-		return heightmap[idx] * maxElevation;
+		const heightScale = soilDepth / 3.0;
+		return heightmap[idx] * maxElevation * heightScale;
 	}
 
 	// Calculate spawn rate based on phase - optimized for performance
