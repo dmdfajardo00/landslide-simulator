@@ -57,7 +57,7 @@
 	<title>Hazard Map - Landslide Simulator</title>
 </svelte:head>
 
-<div class="h-screen flex flex-col md:flex-row bg-neutral-100 overflow-hidden">
+<div class="h-dvh flex flex-col md:flex-row bg-neutral-100 overflow-hidden">
 	<!-- Desktop Sidebar - Hidden on mobile -->
 	<div class="hidden md:block md:w-80 md:flex-shrink-0">
 		<MapSidebar
@@ -81,40 +81,53 @@
 			hazardFilter={activeFilters}
 		/>
 
-		<!-- Mobile Filters Button -->
-		<button
-			class="fixed bottom-4 left-4 md:hidden h-12 px-4 bg-white text-neutral-900 rounded-lg shadow-lg hover:bg-neutral-50 border border-neutral-200 flex items-center gap-2 font-medium z-10 text-sm"
-			onclick={() => (showMapSidebarDrawer = true)}
-			title="Filters"
-		>
-			<Icon icon="fluent:filter-24-regular" class="w-5 h-5" />
-			<span>Filters</span>
-		</button>
+		<!-- Mobile Navigation Bar -->
+		<div class="fixed bottom-0 left-0 right-0 md:hidden p-3 bg-white border-t border-neutral-200 z-20 flex gap-2">
+			<a
+				href="/"
+				class="flex-1 h-12 px-3 py-2 bg-neutral-100 text-neutral-900 rounded hover:bg-neutral-200 border border-neutral-300 flex items-center justify-center gap-2 min-w-0 text-sm"
+				title="Back to Simulator"
+			>
+				<Icon icon="fluent:cube-24-regular" class="w-5 h-5 flex-shrink-0" />
+				<span class="hidden sm:inline truncate">Simulator</span>
+			</a>
+			<button
+				class="flex-1 h-12 px-3 py-2 bg-neutral-900 text-white rounded hover:bg-neutral-800 flex items-center justify-center gap-2 min-w-0 text-sm"
+				onclick={() => (showMapSidebarDrawer = true)}
+				title="Filters"
+			>
+				<Icon icon="fluent:filter-24-regular" class="w-5 h-5 flex-shrink-0" />
+				<span class="hidden sm:inline truncate">Filters</span>
+			</button>
+		</div>
 	</main>
 
 	<!-- Mobile Sidebar Drawer -->
 	{#if showMapSidebarDrawer}
 		<div class="fixed inset-0 md:hidden z-40 bg-black/50" onclick={() => (showMapSidebarDrawer = false)}></div>
-		<div class="fixed inset-y-0 left-0 w-80 md:hidden z-50 bg-white overflow-y-auto transition-transform">
-			<div class="p-3 border-b border-neutral-200 flex items-center justify-between sticky top-0 bg-white">
+		<div class="fixed inset-y-0 left-0 w-full sm:w-80 md:hidden z-50 bg-white overflow-y-auto transition-transform">
+			<div class="p-3 border-b border-neutral-200 flex items-center justify-between sticky top-0 bg-white z-10">
 				<h2 class="text-lg font-semibold">Map Filters</h2>
 				<button
-					class="p-2 hover:bg-neutral-100 rounded"
+					class="p-2 hover:bg-neutral-100 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900"
 					onclick={() => (showMapSidebarDrawer = false)}
 					title="Close"
+					aria-label="Close filters drawer"
 				>
-					✕
+					<Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
 				</button>
 			</div>
-			<MapSidebar
-				{selectedFeature}
-				{hoveredFeature}
-				bind:activeFilters
-				onLoadInSimulator={handleLoadInSimulator}
-				onResetView={handleResetView}
-				onGoToLocation={handleGoToLocation}
-				{isLocating}
-			/>
+			<div class="pb-20">
+					<MapSidebar
+					{selectedFeature}
+					{hoveredFeature}
+					bind:activeFilters
+					onLoadInSimulator={handleLoadInSimulator}
+					onResetView={handleResetView}
+					onGoToLocation={handleGoToLocation}
+					{isLocating}
+				/>
+			</div>
 		</div>
 	{/if}
 </div>

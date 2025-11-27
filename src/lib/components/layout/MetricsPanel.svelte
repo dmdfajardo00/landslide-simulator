@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
 	import { getFosStatus, getPofStatus, getRuStatus, getCohesionStatus, calculateOverallStatus } from '$lib/components/metrics';
 
 	interface ChatMessage {
@@ -23,6 +24,11 @@
 		rainfallIntensity?: number;
 		isRaining?: boolean;
 		isTriggered?: boolean;
+		// Calculation breakdown props
+		baseCohesion?: number;
+		porePressurePw?: number;
+		saturationDepth?: number;
+		cov?: number;
 	}
 
 	let {
@@ -41,8 +47,76 @@
 		initialMoisture = 30,
 		rainfallIntensity = 25,
 		isRaining = false,
-		isTriggered = false
+		isTriggered = false,
+		// Calculation breakdown props
+		baseCohesion = 15,
+		porePressurePw = 0,
+		saturationDepth = 0,
+		cov = 0.15
 	}: Props = $props();
+
+	// Modal state for metric calculation details
+	let activeMetricModal = $state<string | null>(null);
+
+	// Constants
+	const WATER_UNIT_WEIGHT = 9.81; // kN/m³
+
+	// FoS calculation breakdown
+	const fosBreakdown = $derived(() => {
+		const thetaRad = (slopeAngle * Math.PI) / 180;
+		const phiRad = (frictionAngle * Math.PI) / 180;
+		const sinTheta = Math.sin(thetaRad);
+		const cosTheta = Math.cos(thetaRad);
+		const cos2Theta = cosTheta * cosTheta;
+		const tanPhi = Math.tan(phiRad);
+
+		const normalStress = unitWeight * soilDepth * cos2Theta;
+		const effectiveNormalStress = normalStress - porePressurePw;
+		const cohesiveResistance = cohesion;
+		const frictionalResistance = effectiveNormalStress * tanPhi;
+		const totalResistance = cohesiveResistance + frictionalResistance;
+		const drivingForce = unitWeight * soilDepth * sinTheta * cosTheta;
+
+		return {
+			thetaRad,
+			phiRad,
+			sinTheta,
+			cosTheta,
+			cos2Theta,
+			tanPhi,
+			normalStress,
+			effectiveNormalStress,
+			cohesiveResistance,
+			frictionalResistance,
+			totalResistance,
+			drivingForce
+		};
+	});
+
+	// PoF calculation breakdown
+	const pofBreakdown = $derived(() => {
+		const sigma = fos * cov;
+		const beta = sigma > 0.0001 ? (fos - 1) / sigma : 0;
+		return { sigma, beta, cov };
+	});
+
+	// ru calculation breakdown
+	const ruBreakdown = $derived(() => {
+		const Pw = WATER_UNIT_WEIGHT * saturationDepth;
+		const totalStress = unitWeight * soilDepth;
+		return { Pw, totalStress, saturationDepth, waterUnitWeight: WATER_UNIT_WEIGHT };
+	});
+
+	// Cohesion calculation breakdown
+	const cohesionBreakdown = $derived(() => {
+		const rootCohesion = (vegetationCover / 100) * 12;
+		const saturationEffect = Math.pow(ru, 1.5);
+		const minCohesionRatio = 0.15;
+		const saturationFactor = 1 - (1 - minCohesionRatio) * saturationEffect;
+		const rawCohesion = (baseCohesion + rootCohesion) * saturationFactor;
+		const minCohesion = baseCohesion * minCohesionRatio;
+		return { rootCohesion, saturationEffect, saturationFactor, rawCohesion, minCohesion, minCohesionRatio };
+	});
 
 	// Track history for charts - throttled updates
 	const MAX_HISTORY = 60;
@@ -89,6 +163,7 @@
 	interface Metric {
 		label: string;
 		abbrev: string;
+		id: string;
 		value: string;
 		unit: string;
 		status: 'safe' | 'marginal' | 'critical' | 'failure';
@@ -98,10 +173,10 @@
 	}
 
 	const metrics: Metric[] = $derived([
-		{ label: 'Factor of Safety', abbrev: 'FoS', value: fos.toFixed(3), unit: '', status: fosStatus, history: fosHistory, min: 0.5, max: 3 },
-		{ label: 'Failure Probability', abbrev: 'PoF', value: pof.toFixed(2), unit: '%', status: pofStatus, history: pofHistory, min: 0, max: 100 },
-		{ label: 'Pore Pressure Ratio', abbrev: 'ru', value: ru.toFixed(3), unit: '', status: ruStatus, history: ruHistory, min: 0, max: 1 },
-		{ label: 'Effective Cohesion', abbrev: "c'", value: cohesion.toFixed(1), unit: 'kPa', status: cohesionStatus, history: cohesionHistory, min: 0, max: 30 }
+		{ label: 'Factor of Safety', abbrev: 'FoS', id: 'fos', value: fos.toFixed(3), unit: '', status: fosStatus, history: fosHistory, min: 0.5, max: 3 },
+		{ label: 'Failure Probability', abbrev: 'PoF', id: 'pof', value: pof.toFixed(2), unit: '%', status: pofStatus, history: pofHistory, min: 0, max: 100 },
+		{ label: 'Pore Pressure Ratio', abbrev: 'rᵤ', id: 'ru', value: ru.toFixed(3), unit: '', status: ruStatus, history: ruHistory, min: 0, max: 1 },
+		{ label: 'Effective Cohesion', abbrev: "c'", id: 'cohesion', value: cohesion.toFixed(1), unit: 'kPa', status: cohesionStatus, history: cohesionHistory, min: 0, max: 30 }
 	]);
 
 	// Modal state
@@ -299,7 +374,13 @@
 	<!-- Metrics with Charts -->
 	<div class="flex-1 space-y-3 p-4 pb-2">
 		{#each metrics as metric (metric.abbrev)}
-			<div class="space-y-1.5">
+			<div
+				class="space-y-1.5 relative cursor-pointer hover:bg-neutral-50 -mx-2 px-2 py-1 rounded-lg transition-colors"
+				onclick={() => activeMetricModal = metric.id}
+				role="button"
+				tabindex="0"
+				onkeydown={(e) => e.key === 'Enter' && (activeMetricModal = metric.id)}
+			>
 				<!-- Metric Header -->
 				<div class="flex items-baseline justify-between">
 					<div class="flex flex-col">
@@ -594,9 +675,10 @@
 					<h1 class="text-2xl font-bold text-neutral-900">About This Project</h1>
 					<button
 						onclick={() => (showAbout = false)}
-						class="text-neutral-400 hover:text-neutral-600 text-2xl leading-none"
+						class="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900"
+						aria-label="Close about modal"
 					>
-						×
+						<Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
 					</button>
 				</div>
 
@@ -1054,6 +1136,377 @@
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
 						</svg>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Calculation Details Modal -->
+{#if activeMetricModal}
+	<div class="fixed inset-0 bg-black/50 z-40" onclick={() => (activeMetricModal = null)}></div>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" onclick={() => (activeMetricModal = null)}>
+		<div class="bg-white rounded-lg shadow-xl max-h-[95vh] sm:max-h-[90vh] w-full sm:max-w-xl overflow-y-auto" onclick={(e) => e.stopPropagation()}>
+			<div class="p-4 sm:p-6">
+				<!-- Header -->
+				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-lg font-bold text-neutral-900">
+						{#if activeMetricModal === 'fos'}
+							Factor of Safety (FoS)
+						{:else if activeMetricModal === 'pof'}
+							Probability of Failure (PoF)
+						{:else if activeMetricModal === 'ru'}
+							Pore Pressure Ratio (rᵤ)
+						{:else if activeMetricModal === 'cohesion'}
+							Effective Cohesion (c')
+						{/if}
+					</h2>
+					<button
+						onclick={() => (activeMetricModal = null)}
+						class="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded focus:outline-none focus:ring-2 focus:ring-neutral-900"
+						aria-label="Close modal"
+					>
+						<Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+					</button>
+				</div>
+
+				<!-- FoS Calculation -->
+				{#if activeMetricModal === 'fos'}
+					{@const calc = fosBreakdown()}
+					<div class="space-y-4">
+						<!-- Formula -->
+						<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Formula (Infinite Slope)</p>
+							<p class="font-mono text-sm text-neutral-900">FoS = [c' + (σ - u)·tan φ'] / τ</p>
+							<p class="font-mono text-xs text-neutral-600 mt-1">FoS = [c' + (γ·z·cos²β - u)·tan φ'] / [γ·z·sin β·cos β]</p>
+						</div>
+
+						<!-- Input Parameters -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Input Parameters</p>
+							<div class="grid grid-cols-2 gap-2 text-xs">
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Slope Angle (β)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{slopeAngle}°</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Soil Depth (z)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{soilDepth.toFixed(2)} m</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Unit Weight (γ)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{unitWeight.toFixed(1)} kN/m³</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Friction Angle (φ')</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{frictionAngle}°</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Cohesion (c')</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{cohesion.toFixed(2)} kPa</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Pore Pressure (u)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{porePressurePw.toFixed(2)} kPa</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Step-by-Step Calculation -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Step-by-Step Calculation</p>
+							<div class="space-y-2 text-xs">
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 1: Normal Stress (σ)</p>
+									<p class="font-mono text-blue-800 mt-1">σ = γ × z × cos²β</p>
+									<p class="font-mono text-blue-700 mt-1">σ = {unitWeight.toFixed(1)} × {soilDepth.toFixed(2)} × cos²({slopeAngle}°)</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">σ = {calc.normalStress.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 2: Effective Normal Stress (σ')</p>
+									<p class="font-mono text-blue-800 mt-1">σ' = σ - u</p>
+									<p class="font-mono text-blue-700 mt-1">σ' = {calc.normalStress.toFixed(3)} - {porePressurePw.toFixed(2)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">σ' = {calc.effectiveNormalStress.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 3: Resisting Forces</p>
+									<p class="font-mono text-blue-800 mt-1">Resistance = c' + σ' × tan(φ')</p>
+									<p class="font-mono text-blue-700 mt-1">Resistance = {cohesion.toFixed(2)} + {calc.effectiveNormalStress.toFixed(3)} × tan({frictionAngle}°)</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">Resistance = {calc.totalResistance.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 4: Driving Force (τ)</p>
+									<p class="font-mono text-blue-800 mt-1">τ = γ × z × sin(β) × cos(β)</p>
+									<p class="font-mono text-blue-700 mt-1">τ = {unitWeight.toFixed(1)} × {soilDepth.toFixed(2)} × sin({slopeAngle}°) × cos({slopeAngle}°)</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">τ = {calc.drivingForce.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-green-50 rounded p-3 border border-green-200">
+									<p class="font-semibold text-green-900">Step 5: Factor of Safety</p>
+									<p class="font-mono text-green-800 mt-1">FoS = Resistance / τ</p>
+									<p class="font-mono text-green-700 mt-1">FoS = {calc.totalResistance.toFixed(3)} / {calc.drivingForce.toFixed(3)}</p>
+									<p class="font-mono font-bold text-green-900 text-base mt-1">FoS = {fos.toFixed(3)}</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Interpretation -->
+						<div class="bg-neutral-100 rounded-lg p-3 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-700">Interpretation</p>
+							<p class="text-xs text-neutral-600 mt-1">
+								{#if fos >= 1.5}
+									FoS ≥ 1.5: <span class="font-semibold text-green-700">Slope is stable</span> with adequate safety margin.
+								{:else if fos >= 1.0}
+									1.0 ≤ FoS &lt; 1.5: <span class="font-semibold text-yellow-700">Marginal stability</span> - monitor conditions closely.
+								{:else}
+									FoS &lt; 1.0: <span class="font-semibold text-red-700">Unstable slope</span> - failure is likely or imminent.
+								{/if}
+							</p>
+						</div>
+					</div>
+
+				<!-- PoF Calculation -->
+				{:else if activeMetricModal === 'pof'}
+					{@const calc = pofBreakdown()}
+					<div class="space-y-4">
+						<!-- Formula -->
+						<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Formula (FOSM Method)</p>
+							<p class="font-mono text-sm text-neutral-900">PoF = Φ(-β)</p>
+							<p class="font-mono text-xs text-neutral-600 mt-1">where β = (FoS - 1) / σ_FoS</p>
+							<p class="font-mono text-xs text-neutral-600">and σ_FoS = FoS × CoV</p>
+						</div>
+
+						<!-- Input Parameters -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Input Parameters</p>
+							<div class="grid grid-cols-2 gap-2 text-xs">
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Factor of Safety</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{fos.toFixed(3)}</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Coeff. of Variation</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{calc.cov.toFixed(2)}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Step-by-Step Calculation -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Step-by-Step Calculation</p>
+							<div class="space-y-2 text-xs">
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 1: Standard Deviation of FoS</p>
+									<p class="font-mono text-blue-800 mt-1">σ_FoS = FoS × CoV</p>
+									<p class="font-mono text-blue-700 mt-1">σ_FoS = {fos.toFixed(3)} × {calc.cov.toFixed(2)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">σ_FoS = {calc.sigma.toFixed(4)}</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 2: Reliability Index (β)</p>
+									<p class="font-mono text-blue-800 mt-1">β = (FoS - 1) / σ_FoS</p>
+									<p class="font-mono text-blue-700 mt-1">β = ({fos.toFixed(3)} - 1) / {calc.sigma.toFixed(4)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">β = {calc.beta.toFixed(4)}</p>
+								</div>
+								<div class="bg-green-50 rounded p-3 border border-green-200">
+									<p class="font-semibold text-green-900">Step 3: Probability of Failure</p>
+									<p class="font-mono text-green-800 mt-1">PoF = Φ(-β) × 100%</p>
+									<p class="font-mono text-green-700 mt-1">PoF = Φ(-{calc.beta.toFixed(4)}) × 100%</p>
+									<p class="font-mono font-bold text-green-900 text-base mt-1">PoF = {pof.toFixed(2)}%</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Interpretation -->
+						<div class="bg-neutral-100 rounded-lg p-3 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-700">Interpretation</p>
+							<p class="text-xs text-neutral-600 mt-1">
+								{#if pof < 1}
+									PoF &lt; 1%: <span class="font-semibold text-green-700">Very low failure risk</span> - acceptable for most applications.
+								{:else if pof < 10}
+									1% ≤ PoF &lt; 10%: <span class="font-semibold text-yellow-700">Moderate risk</span> - consider mitigation measures.
+								{:else if pof < 50}
+									10% ≤ PoF &lt; 50%: <span class="font-semibold text-orange-700">High risk</span> - significant probability of failure.
+								{:else}
+									PoF ≥ 50%: <span class="font-semibold text-red-700">Critical risk</span> - failure is highly probable.
+								{/if}
+							</p>
+						</div>
+					</div>
+
+				<!-- ru Calculation -->
+				{:else if activeMetricModal === 'ru'}
+					{@const calc = ruBreakdown()}
+					<div class="space-y-4">
+						<!-- Formula -->
+						<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Formula</p>
+							<p class="font-mono text-sm text-neutral-900">rᵤ = u / (γ × z)</p>
+							<p class="font-mono text-xs text-neutral-600 mt-1">where u = γᵥ × hᵥ (pore water pressure)</p>
+						</div>
+
+						<!-- Input Parameters -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Input Parameters</p>
+							<div class="grid grid-cols-2 gap-2 text-xs">
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Water Unit Weight (γᵥ)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{calc.waterUnitWeight.toFixed(2)} kN/m³</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Saturation Depth (hᵥ)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{calc.saturationDepth.toFixed(3)} m</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Soil Unit Weight (γ)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{unitWeight.toFixed(1)} kN/m³</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Soil Depth (z)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{soilDepth.toFixed(2)} m</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Step-by-Step Calculation -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Step-by-Step Calculation</p>
+							<div class="space-y-2 text-xs">
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 1: Pore Water Pressure (u)</p>
+									<p class="font-mono text-blue-800 mt-1">u = γᵥ × hᵥ</p>
+									<p class="font-mono text-blue-700 mt-1">u = {calc.waterUnitWeight.toFixed(2)} × {calc.saturationDepth.toFixed(3)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">u = {calc.Pw.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 2: Total Vertical Stress</p>
+									<p class="font-mono text-blue-800 mt-1">σᵥ = γ × z</p>
+									<p class="font-mono text-blue-700 mt-1">σᵥ = {unitWeight.toFixed(1)} × {soilDepth.toFixed(2)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">σᵥ = {calc.totalStress.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-green-50 rounded p-3 border border-green-200">
+									<p class="font-semibold text-green-900">Step 3: Pore Pressure Ratio</p>
+									<p class="font-mono text-green-800 mt-1">rᵤ = u / σᵥ</p>
+									<p class="font-mono text-green-700 mt-1">rᵤ = {calc.Pw.toFixed(3)} / {calc.totalStress.toFixed(3)}</p>
+									<p class="font-mono font-bold text-green-900 text-base mt-1">rᵤ = {ru.toFixed(3)}</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Interpretation -->
+						<div class="bg-neutral-100 rounded-lg p-3 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-700">Interpretation</p>
+							<p class="text-xs text-neutral-600 mt-1">
+								{#if ru < 0.3}
+									rᵤ &lt; 0.3: <span class="font-semibold text-green-700">Low pore pressure</span> - soil is relatively dry.
+								{:else if ru < 0.5}
+									0.3 ≤ rᵤ &lt; 0.5: <span class="font-semibold text-yellow-700">Moderate saturation</span> - effective stress reduced.
+								{:else if ru < 0.7}
+									0.5 ≤ rᵤ &lt; 0.7: <span class="font-semibold text-orange-700">High pore pressure</span> - significant strength reduction.
+								{:else}
+									rᵤ ≥ 0.7: <span class="font-semibold text-red-700">Near-saturated</span> - very low effective stress.
+								{/if}
+							</p>
+						</div>
+					</div>
+
+				<!-- Cohesion Calculation -->
+				{:else if activeMetricModal === 'cohesion'}
+					{@const calc = cohesionBreakdown()}
+					<div class="space-y-4">
+						<!-- Formula -->
+						<div class="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Formula</p>
+							<p class="font-mono text-sm text-neutral-900">c' = max(c₀×0.15, (c₀ + c_root) × Sᶠ)</p>
+							<p class="font-mono text-xs text-neutral-600 mt-1">where Sᶠ = 1 - 0.85 × rᵤ^1.5 (saturation factor)</p>
+							<p class="font-mono text-xs text-neutral-600">and c_root = V × 12 kPa (root cohesion)</p>
+						</div>
+
+						<!-- Input Parameters -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Input Parameters</p>
+							<div class="grid grid-cols-2 gap-2 text-xs">
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Base Cohesion (c₀)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{baseCohesion.toFixed(1)} kPa</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Vegetation Cover (V)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{vegetationCover}%</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Pore Pressure Ratio (rᵤ)</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{ru.toFixed(3)}</span>
+								</div>
+								<div class="bg-neutral-50 rounded p-2 border border-neutral-100">
+									<span class="text-neutral-500">Min. Cohesion Ratio</span>
+									<span class="float-right font-mono font-semibold text-neutral-900">{calc.minCohesionRatio}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Step-by-Step Calculation -->
+						<div>
+							<p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Step-by-Step Calculation</p>
+							<div class="space-y-2 text-xs">
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 1: Root Cohesion</p>
+									<p class="font-mono text-blue-800 mt-1">c_root = V × 12 kPa</p>
+									<p class="font-mono text-blue-700 mt-1">c_root = {(vegetationCover / 100).toFixed(2)} × 12</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">c_root = {calc.rootCohesion.toFixed(2)} kPa</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 2: Saturation Effect</p>
+									<p class="font-mono text-blue-800 mt-1">Saturation Effect = rᵤ^1.5</p>
+									<p class="font-mono text-blue-700 mt-1">Saturation Effect = {ru.toFixed(3)}^1.5</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">Saturation Effect = {calc.saturationEffect.toFixed(4)}</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 3: Saturation Factor (Sᶠ)</p>
+									<p class="font-mono text-blue-800 mt-1">Sᶠ = 1 - (1 - 0.15) × saturation effect</p>
+									<p class="font-mono text-blue-700 mt-1">Sᶠ = 1 - 0.85 × {calc.saturationEffect.toFixed(4)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">Sᶠ = {calc.saturationFactor.toFixed(4)}</p>
+								</div>
+								<div class="bg-blue-50 rounded p-3 border border-blue-100">
+									<p class="font-semibold text-blue-900">Step 4: Raw Effective Cohesion</p>
+									<p class="font-mono text-blue-800 mt-1">c'_raw = (c₀ + c_root) × Sᶠ</p>
+									<p class="font-mono text-blue-700 mt-1">c'_raw = ({baseCohesion.toFixed(1)} + {calc.rootCohesion.toFixed(2)}) × {calc.saturationFactor.toFixed(4)}</p>
+									<p class="font-mono font-semibold text-blue-900 mt-1">c'_raw = {calc.rawCohesion.toFixed(3)} kPa</p>
+								</div>
+								<div class="bg-green-50 rounded p-3 border border-green-200">
+									<p class="font-semibold text-green-900">Step 5: Final Effective Cohesion</p>
+									<p class="font-mono text-green-800 mt-1">c' = max(c₀ × 0.15, c'_raw)</p>
+									<p class="font-mono text-green-700 mt-1">c' = max({calc.minCohesion.toFixed(2)}, {calc.rawCohesion.toFixed(3)})</p>
+									<p class="font-mono font-bold text-green-900 text-base mt-1">c' = {cohesion.toFixed(2)} kPa</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Interpretation -->
+						<div class="bg-neutral-100 rounded-lg p-3 border border-neutral-200">
+							<p class="text-xs font-semibold text-neutral-700">Interpretation</p>
+							<p class="text-xs text-neutral-600 mt-1">
+								{#if cohesion >= 15}
+									c' ≥ 15 kPa: <span class="font-semibold text-green-700">Strong cohesion</span> - soil has good internal strength.
+								{:else if cohesion >= 8}
+									8 ≤ c' &lt; 15 kPa: <span class="font-semibold text-yellow-700">Moderate cohesion</span> - some strength reduction.
+								{:else if cohesion >= 3}
+									3 ≤ c' &lt; 8 kPa: <span class="font-semibold text-orange-700">Low cohesion</span> - significant weakening from saturation.
+								{:else}
+									c' &lt; 3 kPa: <span class="font-semibold text-red-700">Very low cohesion</span> - near residual strength.
+								{/if}
+							</p>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Close Button -->
+				<div class="mt-6 flex justify-end">
+					<button
+						onclick={() => (activeMetricModal = null)}
+						class="px-4 py-2 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
+					>
+						Close
 					</button>
 				</div>
 			</div>
