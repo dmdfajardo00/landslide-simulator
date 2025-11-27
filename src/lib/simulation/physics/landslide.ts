@@ -136,10 +136,15 @@ export function calculateFailureZone(
 
 /**
  * Update landslide state - advances the deformation progress
+ *
+ * @param state - Current landslide state
+ * @param deltaTime - Time step in seconds
+ * @param saturation - Current soil saturation ratio (0-1), affects flow velocity
  */
 export function updateLandslideState(
 	state: LandslideState,
-	deltaTime: number
+	deltaTime: number,
+	saturation: number = 0.5
 ): LandslideState {
 	if (state.phase === 'dormant' || state.phase === 'complete') {
 		return state;
@@ -149,10 +154,16 @@ export function updateLandslideState(
 	let newProgress = state.progress;
 	let newPhase: LandslideState['phase'] = state.phase;
 
+	// Saturation affects deformation rate (wetter = faster flow)
+	// Dry (0%): 0.5x rate → ~30 second slide
+	// Moderate (50%): 1.0x rate → ~15 second slide
+	// Saturated (100%): 2.0x rate → ~7 second slide
+	const saturationFactor = 0.5 + saturation * 1.5;
+
 	// Progress advances over time (faster initially, then slowing)
-	// Total duration ~15-20 seconds for complete slide
-	const progressRate = 0.08 * (1 - state.progress * 0.7); // Slows as it progresses
-	newProgress = Math.min(1.0, state.progress + progressRate * deltaTime);
+	// Base rate scaled by saturation factor
+	const baseProgressRate = 0.08 * saturationFactor * (1 - state.progress * 0.7); // Slows as it progresses
+	newProgress = Math.min(1.0, state.progress + baseProgressRate * deltaTime);
 
 	// Phase transitions based on progress
 	if (newProgress < 0.2) {

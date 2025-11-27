@@ -76,7 +76,7 @@
 					unit="°"
 				/>
 				<ParameterSlider
-					label="Depth to Failure Plane"
+					label="Slope Height"
 					bind:value={soilDepth}
 					min={0.5}
 					max={10}

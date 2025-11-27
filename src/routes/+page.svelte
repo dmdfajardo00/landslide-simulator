@@ -189,6 +189,46 @@
 
 		// Calculate Probability of Failure
 		pof = calculatePoF(fos, DEFAULT_COEFFICIENT_OF_VARIATION);
+
+		// Pre-failure deformation when FoS approaches critical state (before explicit trigger)
+		// Shows warning signs: tension cracks at head scarp
+		if (!isTriggered && fos < 1.2 && currentHeightmap) {
+			const creepIntensity = Math.max(0, 1.2 - fos) / 0.2; // 0 at FoS=1.2, 1.0 at FoS=1.0
+			const creepProgress = Math.min(0.15, creepIntensity * 0.15); // Max 15% deformation pre-failure
+
+			// Only initialize failure zone once
+			if (!landslideState.failureZone) {
+				const effectiveSaturation = Math.max(saturation, 0.3);
+				landslideState.failureZone = calculateFailureZone(
+					currentHeightmap,
+					TERRAIN_WIDTH,
+					TERRAIN_HEIGHT,
+					WORLD_SCALE,
+					maxElevation,
+					slopeAngle,
+					soilDepth,
+					effectiveSaturation,
+					landslideSeverity / 100,
+					vegetationCover / 100,
+					0 // No erosion parameter
+				);
+			}
+
+			// Apply tension cracks and micro-deformations
+			calculateTerrainDeformation(
+				landslideState.failureZone,
+				creepProgress,
+				TERRAIN_WIDTH,
+				TERRAIN_HEIGHT,
+				WORLD_SCALE,
+				deformationScarp,
+				deformationDeposition
+			);
+
+			scarpDepth = deformationScarp;
+			depositionDepth = deformationDeposition;
+			deformationVersion++;
+		}
 	}
 
 	function startSimulation() {
@@ -278,8 +318,9 @@
 
 		if (!currentHeightmap) return;
 
-		// Update landslide state (advances progress over time)
-		landslideState = updateLandslideState(landslideState, DELTA_TIME);
+		// Update landslide state (advances progress over time, scaled by current saturation)
+		// Wetter slopes deform faster (higher saturation → higher velocity)
+		landslideState = updateLandslideState(landslideState, DELTA_TIME, saturation);
 
 		// Update terrain deformation based on current progress (reusing pre-allocated arrays)
 		if (landslideState.failureZone) {
