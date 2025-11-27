@@ -1,12 +1,4 @@
 {
 	"$schema": "https://openapi.vercel.sh/vercel.json",
-	"framework": "sveltekit",
-	"buildCommand": "npm run build",
-	"installCommand": "npm install",
-	"functions": {
-		"**/*.js": {
-			"memory": 1024,
-			"maxDuration": 10
-		}
-	}
+	"framework": "sveltekit"
 }
