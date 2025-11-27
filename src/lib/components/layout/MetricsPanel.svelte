@@ -497,7 +497,7 @@
 			}}
 			class="px-2 py-1.5 text-[10px] font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded border border-neutral-200 transition-colors"
 		>
-			PARAMETERS
+			KEY CONCEPTS
 		</button>
 	</div>
 
@@ -536,7 +536,7 @@
 						{ id: 'student', label: 'Student Guide' },
 						{ id: 'formulas', label: 'Formulas & Theory' },
 						{ id: 'info', label: 'Simulation Info' },
-						{ id: 'parameters', label: 'Geotechnical Parameters' }
+						{ id: 'parameters', label: 'Key Concepts' }
 					] as tab}
 						<button
 							onclick={() => (activeTab = tab.id)}
@@ -569,13 +569,6 @@
 								<li>Use the action buttons to toggle rain simulation and trigger landslides</li>
 								<li>Monitor the metrics panel on the right to track Factor of Safety, Probability of Failure, and other key indicators</li>
 								<li>Observe real-time 3D terrain deformation and particle physics</li>
-							</ul>
-							<h3 class="font-semibold text-neutral-900 mt-4">Key Concepts</h3>
-							<ul class="list-disc list-inside space-y-2 text-sm">
-								<li><strong>Factor of Safety (FoS):</strong> Ratio of shear strength to shear stress. FoS > 1.5 indicates stability</li>
-								<li><strong>Pore Pressure:</strong> Water pressure within soil affects shear strength and failure</li>
-								<li><strong>Slope Angle:</strong> Steeper slopes are more susceptible to failure</li>
-								<li><strong>Vegetation:</strong> Root systems increase soil cohesion and stability</li>
 							</ul>
 						</div>
 					</div>
@@ -630,32 +623,13 @@
 					</div>
 				{:else if activeTab === 'parameters'}
 					<div class="prose prose-sm max-w-none">
-						<h2 class="text-lg font-bold text-neutral-900 mb-4">Geotechnical Parameters</h2>
+						<h2 class="text-lg font-bold text-neutral-900 mb-4">Key Concepts</h2>
 						<div class="space-y-4 text-neutral-700 text-sm">
-							<h3 class="font-semibold text-neutral-900">Slope Geometry</h3>
 							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Slope Angle (θ):</strong> 15-75° - Controls gravitational component along slope</li>
-								<li><strong>Soil Depth (H):</strong> 1-10m - Thickness of potentially failing soil layer</li>
-								<li><strong>Max Elevation:</strong> 20-100m - Overall terrain height in 3D view</li>
-							</ul>
-							<h3 class="font-semibold text-neutral-900 mt-4">Soil Properties</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Cohesion (c):</strong> 0-50 kPa - Internal soil strength independent of stress</li>
-								<li><strong>Friction Angle (φ):</strong> 15-45° - Angle of internal friction</li>
-								<li><strong>Unit Weight (γ):</strong> 16-22 kN/m³ - Weight per unit volume of soil</li>
-								<li><strong>Hydraulic Conductivity (k):</strong> 1e-6 to 1e-3 m/s - Rate of water infiltration</li>
-							</ul>
-							<h3 class="font-semibold text-neutral-900 mt-4">Hydrological Factors</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Rainfall Intensity (I):</strong> 0-100 mm/hr - Rate of water input</li>
-								<li><strong>Pore Pressure (Pw):</strong> 0-100 kPa - Water pressure in soil pores</li>
-								<li><strong>Saturation (S):</strong> 0-100% - Percentage of pores filled with water</li>
-							</ul>
-							<h3 class="font-semibold text-neutral-900 mt-4">Vegetation</h3>
-							<ul class="list-disc list-inside space-y-2">
-								<li><strong>Coverage (%):</strong> 0-100% - Density of plant cover on slope</li>
-								<li><strong>Root Strength:</strong> Contributes 2-5 kPa per 10% coverage</li>
-								<li><strong>Interception:</strong> Vegetation intercepts ~30% of rainfall</li>
+								<li><strong>Factor of Safety (FoS):</strong> Ratio of shear strength to shear stress. FoS &gt; 1.5 indicates stability</li>
+								<li><strong>Pore Pressure:</strong> Water pressure within soil affects shear strength and failure</li>
+								<li><strong>Slope Angle:</strong> Steeper slopes are more susceptible to failure</li>
+								<li><strong>Vegetation:</strong> Root systems increase soil cohesion and stability</li>
 							</ul>
 						</div>
 					</div>
